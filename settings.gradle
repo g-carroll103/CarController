@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "CarController"
 include ':app'
+include ':OpenCV4Android'
