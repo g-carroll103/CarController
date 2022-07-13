@@ -5,7 +5,7 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
+    android:background="@android:color/holo_red_light"
     android:visibility="visible"
     tools:context=".MainActivity"
     tools:visibility="visible">
@@ -14,7 +14,6 @@
         android:id="@+id/textState"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="652dp"
         android:background="#FFFFFFFF"
         android:gravity="center_horizontal|center_vertical"
         android:scrollbars="vertical"
@@ -22,21 +21,22 @@
         android:textAlignment="center"
         android:verticalScrollbarPosition="right"
         app:layout_anchorGravity="center_horizontal|center_vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/javaCamera2View"
+        app:layout_constraintEnd_toEndOf="@+id/javaCamera2View"
+        app:layout_constraintStart_toStartOf="@+id/javaCamera2View"
         tools:ignore="RtlCompat,TextContrastCheck" />
 
     <ImageView
-        android:id="@+id/imageView"
+        android:id="@+id/imgJoystick"
         android:layout_width="250dp"
         android:layout_height="250dp"
+        android:alpha="1"
+        android:background="@drawable/touchpad"
         android:clickable="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5"
         app:srcCompat="@drawable/touchpad"
         tools:ignore="SpeakableTextPresentCheck" />
 
@@ -47,10 +47,21 @@
         android:background="@color/white"
         android:gravity="center_horizontal|center_vertical"
         android:text="textOutput"
-        app:layout_constraintBottom_toTopOf="@+id/imageView"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toTopOf="@+id/imgJoystick"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="@+id/imgJoystick" />
+
+    <org.opencv.android.JavaCamera2View
+        android:id="@+id/javaCamera2View"
+        android:layout_width="320dp"
+        android:layout_height="240dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/imgJoystick"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
