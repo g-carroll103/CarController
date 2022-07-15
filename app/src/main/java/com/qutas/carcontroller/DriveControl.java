@@ -19,60 +19,87 @@ public class DriveControl {
     TextView outText;
     enum State {
         STARTUP,
-        IDLE,
-        RUNNING,
-        ESTOP,
+        CONNECTED,
         ERR,
         NO_UART
     }
 
     State appState = State.STARTUP;
-    
-    float throttle = 0, steer = 0;
+
+    final int servoMiddle = 1500;
+    final int steerScale = -300;
+    final int throttleScale = 250;
+    boolean autonomousControl = false;
+    float throttleA = 0, steerA = 0;
+    float throttleM = 0, steerM = 0;
     int throttleMicros = 0, steerMicros = 0;
     // Servo midpoint in micros
-    final int servoMiddle = 1500;
-    // Servo output scale in micros
-    final int steerScale = 250;
-    final int throttleScale = 200;
+
 
     public DriveControl(TextView outText){
         this.outText = outText;
     }
 
-    public void SetControls(float thr, float str) {
-        steer = str;
-        throttle = thr;
-        throttleMicros = servoMiddle + (int) (throttleScale * thr);
-        steerMicros = servoMiddle + (int) (steerScale * str);
-
+    public void SetSteerM(float str) {
+         SetControlsM(this.throttleM, str);
     }
 
-    public void WriteCommand(float thr, float str) {
-        //Convert float inputs to servo microseconds out
+    public void SetThrottleM(float thr) {
+         SetControlsM(thr, this.steerM);
+    }
 
+    public void SetControlsM(float thr, float str) {
+        steerM = str;
+        throttleM = thr;
+    }
+
+    public void SetControlsA(float thr, float str) {
+        steerA = str;
+        throttleA = thr;
+    }
+
+    public String GetControlString() {
+
+        String strAutonomous = String.format("A: %3.2f, %3.2f", throttleA, steerA);
+        String strManual =     String.format("M: %3.2f, %3.2f", throttleM, steerM);
+
+        String controlMode = "";
+        if (autonomousControl){
+            controlMode = "A";
+        }
+        else
+        {
+            controlMode = "M";
+        }
+        String strOut = String.format("%s, %d, %d", controlMode, throttleMicros, steerMicros);
+
+        return strAutonomous + "\n" + strManual + "\n" + strOut;
+    }
+
+    public void WriteCommand() {
+        //Convert float inputs to servo microseconds out
+        if (autonomousControl){
+            throttleMicros = servoMiddle + (int) (throttleScale * throttleA);
+            steerMicros = servoMiddle + (int) (steerScale * steerA);
+        }
+        else {
+            throttleMicros = servoMiddle + (int) (throttleScale * throttleM);
+            steerMicros = servoMiddle + (int) (steerScale * steerM);
+        }
         String stringCommand = String.format("%4d,%4d\n", throttleMicros, steerMicros);
         try {
-            port.write(stringCommand.getBytes(StandardCharsets.UTF_8), 100);
-        } catch (Exception ignore) {
-        } //end try port write
-
+                port.write(stringCommand.getBytes(StandardCharsets.UTF_8), 100);
+            } catch (Exception ignore) {
+        }
     }
 
     public void SetAppState(State state){
         appState = state;
-
         switch (appState) {
-            case IDLE:
+            case STARTUP:
                 outText.setBackgroundColor(0x7F7F7F);
                 return;
-            case RUNNING:
-                outText.setBackgroundColor(0x7FFF7F);
-                return;
-            case ESTOP:
-                outText.setBackgroundColor(0xFF7F00);
-                return;
-            case ERR:
+            case CONNECTED:
                 outText.setBackgroundColor(0xFF0000);
                 return;
             case NO_UART:
@@ -105,22 +132,26 @@ public class DriveControl {
             port.open(connection);
             port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
         } catch (Exception e) {
-            SetAppState(State.ERR);
+            SetAppState(State.NO_UART);
             Log.w("Err initialising port: ", e.toString());
             return false;
         }
-        SetAppState(State.IDLE);
+        SetAppState(State.CONNECTED);
         return true;
     }
 
     public void ClosePort() {
         if (port != null){
-                try {
-                WriteCommand(0, 0);
+            try {
+                autonomousControl = false;
+                SetControlsM(0, 0);
+                WriteCommand();
                 port.close();
             } catch (Exception ignored) {
             }
         }
     }
+
+
 
 }
