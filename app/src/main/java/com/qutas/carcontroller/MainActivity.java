@@ -2,6 +2,9 @@ package com.qutas.carcontroller;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CaptureRequest;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,11 +15,18 @@ import android.widget.TextView;
 
 import org.opencv.android.CameraActivity;
 import org.opencv.android.JavaCamera2View;
+import org.opencv.android.JavaCameraView;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.engine.OpenCVEngineInterface;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.osgi.OpenCVInterface;
 import org.opencv.osgi.OpenCVNativeLoader;
 
 
@@ -29,12 +39,11 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
 
     PathFinder pf;
     DriveControl dc;
-    TextView statusBox;
     TextView servoBox;
-    ImageView imgJoystick;
     JavaCamera2View camPreview;
     TimerTask tt = TimerRoutine();
     Timer tmr;
+    boolean colorChecking = true;
 
     @Override
     protected List<? extends CameraBridgeViewBase> getCameraViewList() {
@@ -56,11 +65,8 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         super.onResume();
 
         //Views for displaying app output
-        statusBox = findViewById(R.id.textState);
         servoBox = findViewById(R.id.textOutput);
         //
-        imgJoystick = findViewById(R.id.imgJoystick);
-        imgJoystick.setOnTouchListener(TouchPadListener());
 
         dc = new DriveControl(servoBox);
         dc.InitPort((UsbManager) getSystemService(Context.USB_SERVICE));
@@ -80,8 +86,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     }
 
     @Override
-    public void onPause()
-    {
+    public void onPause() {
         tt.cancel();
         super.onPause();
         if (camPreview != null)
@@ -90,8 +95,52 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        dc.SetControlsA(0.3f, (float)(pf.targetSteer) );
-        return pf.onCameraFrame(inputFrame);
+        dc.SetControlsA(0.27f, (float)(pf.targetSteer) );
+        if (colorChecking) {
+
+            Scalar black = new Scalar(0,0,0);
+            Scalar white = new Scalar(255,255,255);
+            Mat rgbImage = inputFrame.rgba();
+            int sampleX = rgbImage.cols() / 2;
+            int sampleY = rgbImage.rows() / 2;
+            Mat rgbSample = rgbImage.submat(sampleX, sampleX+1, sampleY, sampleY+1);
+            double[] rgbValue = rgbSample.get(0,0);
+
+            Mat hsvSample = new Mat();
+            Imgproc.cvtColor(rgbSample, hsvSample, Imgproc.COLOR_RGB2HSV_FULL);
+            double[] hsvValue = hsvSample.get(0,0);
+
+            Imgproc.circle(rgbImage,
+                new Point(sampleX, sampleY),
+                5,
+                black, 5
+
+            );
+
+            Imgproc.rectangle(rgbImage, new Rect(sampleX-200, sampleY + 100, 400,200),white,-1);
+
+            Imgproc.putText(
+                rgbImage,
+                String.format("H: %3.1f S: %3.1f V: %3.1f", hsvValue[0],hsvValue[1],hsvValue[2]),
+                new Point(sampleX-190, sampleY+130),
+                0,
+                0.9,
+                black
+            );
+            Imgproc.putText(
+                    rgbImage,
+                    String.format("R: %3.1f G: %3.1f B: %3.1f", rgbValue[0],rgbValue[1],rgbValue[2]),
+                    new Point(sampleX-190, sampleY+170),
+                    0,
+                    0.9,
+                    black
+            );
+
+            return rgbImage;
+
+        } else {
+            return pf.onCameraFrame(inputFrame);
+        }
     }
 
     @Override
@@ -105,25 +154,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     @Override
     public void onCameraViewStopped(){
         pf.onCameraViewStopped();
-    }
-
-    //Dummy steering controls
-    public View.OnTouchListener TouchPadListener(){
-        return (v, event) -> {
-            //Convert coords to relative inputs
-            float outThrottle = -(2f * (event.getY() / imgJoystick.getHeight()) - 1);
-            float outSteer =     (2f * (event.getX() / imgJoystick.getWidth())  - 1);
-
-            //Limit values to +/- 1
-            if (outSteer > 1) outSteer = 1;
-            if (outThrottle > 1) outThrottle = 1;
-            if (outSteer < -1) outSteer = -1;
-            if (outThrottle < -1) outThrottle = -1;
-            dc.SetControlsM(outThrottle, outSteer);
-
-            v.performClick();
-            return true;
-        };
     }
 
     public TimerTask TimerRoutine(){

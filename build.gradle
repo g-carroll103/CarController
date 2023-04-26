@@ -1,9 +1,23 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+buildscript {
+    ext.kotlin_version = '1.8.20'
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.4.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
 plugins {
-    id 'com.android.application' version '7.2.1' apply false
-    id 'com.android.library' version '7.2.1' apply false
+    id 'com.android.application' apply false version '7.4.2'
+    id 'com.android.library' apply false version '7.4.2'
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+def opencvsdk='C:/Users/Guy/Android/OpenCV-android-sdk'

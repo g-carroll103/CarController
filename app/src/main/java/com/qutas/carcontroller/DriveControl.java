@@ -28,13 +28,12 @@ public class DriveControl {
 
     final int servoMiddle = 1500;
     final int steerScale = -300;
-    final int throttleScale = 250;
+    final int throttleScale = 200;
     boolean autonomousControl = false;
     float throttleA = 0, steerA = 0;
     float throttleM = 0, steerM = 0;
     int throttleMicros = 0, steerMicros = 0;
     // Servo midpoint in micros
-
 
     public DriveControl(TextView outText){
         this.outText = outText;

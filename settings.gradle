@@ -15,5 +15,8 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "CarController"
+
+def opencvsdk='C:/Users/Guy/Android/OpenCV-android-sdk'
 include ':app'
-include ':OpenCV4Android'
+include ':opencv'
+project(':opencv').projectDir = new File(opencvsdk + '/sdk')
