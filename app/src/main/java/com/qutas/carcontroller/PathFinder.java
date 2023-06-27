@@ -22,12 +22,10 @@ import java.util.List;
 public class PathFinder {
 
     final String TAG = "PathFinder";
-    CameraBridgeViewBase camBVB;
+    CameraBridgeViewBase cameraHandler;
     Context callbackContext;
 
-    private ColorBlobDetector    detectorLeft;
-    private ColorBlobDetector    detectorRight;
-    private ColorBlobDetector detectorObstacle;
+    private ColorBlobDetector    detectorPath;
 
     private final Scalar COLOR_RED =    new Scalar(255,  0,  0);
     private final Scalar COLOR_YELLOW = new Scalar(200,200,  0);
@@ -38,21 +36,16 @@ public class PathFinder {
     private final Scalar COLOR_BLACK =  new Scalar(  0,  0,  0);
     private final Scalar COLOR_WHITE =  new Scalar(255, 255,255);
 
-    private final Scalar ThreshTrackLeftMin = new Scalar(28, 55, 120);
-    private final Scalar ThreshTrackLeftMax = new Scalar(42, 255, 255);
+    private final Scalar CLEARANCE_MIN =  new Scalar(255, 255,255);
+    private final Scalar CLEARANCE_MAX =  new Scalar(255, 255,255);
 
-    private final Scalar ThreshTrackRightMin = new Scalar(28, 55, 120);
-    private final Scalar ThreshTrackRightMax = new Scalar(42, 255, 255);
 
-    private final Scalar ThreshObstacleMin = new Scalar(205, 71, 166 );
-    private final Scalar ThreshObstacleMax = new Scalar(234, 255, 255);
-
-    private Mat mShow;
-    private Mat mProcess;
+    private Mat imgDisplay;
+    private Mat imgProcess;
     private final double processHeight = 0.4;
     public double  targetSteer = 0;
 
-    public double steerIntegral = 0;
+    public double errIntegral = 0;
     public double oldErr = 0;
 
     public final double kI = 0.08;
@@ -62,14 +55,14 @@ public class PathFinder {
 
     BaseLoaderCallback mLoaderCallback;
 
-    public PathFinder(CameraBridgeViewBase camBVB, Context callbackContext){
+    public PathFinder(CameraBridgeViewBase cameraHandler, Context callbackContext){
 
         mLoaderCallback = new BaseLoaderCallback(callbackContext) {
             @Override
             public void onManagerConnected(int status) {
                 if (LoaderCallbackInterface.SUCCESS == status){
                     Log.w(TAG, "OpenCV loaded successfully");
-                    camBVB.enableView();
+                    cameraHandler.enableView();
                 }
                 else {
                     Log.w(TAG, "LoaderCallbackInterface failed");
@@ -86,30 +79,27 @@ public class PathFinder {
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
 
-        //Yellow
-        detectorLeft = new ColorBlobDetector();
-        //Blue
-        detectorRight = new ColorBlobDetector();
 
-        detectorObstacle = new ColorBlobDetector();
-
+        detectorPath = new ColorBlobDetector();
         this.callbackContext = callbackContext;
-        this.camBVB = camBVB;
-        this.camBVB.setCameraIndex(0);
-        //TODO: Camera AE and WB
 
-        this.camBVB.setVisibility(SurfaceView.VISIBLE);
-        Log.w(TAG, "End of pf Constructor");
+        cameraHandler.setCameraIndex(0);
+        this.cameraHandler = cameraHandler;
+
+        //TODO: Camera AE and WB settings
+
+        this.cameraHandler.setVisibility(SurfaceView.VISIBLE);
     }//End constructor
 
     public void onCameraViewStarted(int width, int height) {
-        mShow = new Mat(height, width, CvType.CV_8UC4);
+        //Init the image matrix to the camera output's dimensions
+        imgDisplay = new Mat(height, width, CvType.CV_8UC4);
     }
 
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
-        mShow = inputFrame.rgba();
-        double imgWidthPx = mShow.cols();
+        imgDisplay = inputFrame.rgba();
+        double imgWidthPx = imgDisplay.cols();
 
         double leftInnerEdgePx = 0;
         double rightInnerEdgePx = imgWidthPx;
@@ -118,82 +108,46 @@ public class PathFinder {
         Point topRight = new Point();
         topRight.x = -1;
 
-        int upperRow = (int) (mShow.height() * processHeight);
-        mProcess = mShow.submat(upperRow,mShow.rows(),0,mShow.cols());
+        //The camera image will include a horizon - ignore rows above this point
+        int upperRow = (int) (imgDisplay.height() * processHeight);
 
-        //Detect yellow regions
-        List<MatOfPoint> contoursLeft = detectorLeft
-                .Load(mProcess)
-                .IncludeRange(ThreshTrackLeftMin, ThreshTrackLeftMax)
+        Imgproc.line(imgDisplay, new Point(0, upperRow), new Point(imgWidthPx, upperRow), COLOR_BLACK, 1);
+        imgProcess = imgDisplay.submat(upperRow,imgDisplay.rows(),0,imgDisplay.cols());
+
+        List<MatOfPoint> contourPath = detectorPath
+                .Load(imgProcess)
+                .IncludeRange(CLEARANCE_MIN, CLEARANCE_MAX)
                 .GetContours();
-
-        //Detect blue regions
-        List<MatOfPoint> contoursRight = detectorRight
-                .Load(mProcess)
-                .IncludeRange(ThreshTrackRightMin, ThreshTrackRightMax)
-                .GetContours();
-
-
-        if (contoursLeft.size() > 0) {
-            Rect boxLeft = ContourToRect(contoursLeft);
-            Imgproc.rectangle(mProcess,boxLeft,COLOR_YELLOW,2);
-            leftInnerEdgePx = boxLeft.x + boxLeft.width;
-            topLeft.x = boxLeft.x + boxLeft.width;
-            topLeft.y = boxLeft.y + upperRow;
-        }
-
-        if (contoursRight.size() > 0) {
-            Rect boxRight = ContourToRect(contoursRight);
-            Imgproc.rectangle(mProcess,boxRight,COLOR_BLUE,2);
-            rightInnerEdgePx  = boxRight.x;
-            topRight.x = boxRight.x;
-            topRight.y = boxRight.y + upperRow;
-        }
-
-        //If both regions are visible
-        if (topLeft.x > 0 && topRight.x > 0){
-            //Draw line between points
-            Imgproc.line(mShow, topLeft, topRight, COLOR_CYAN, 2);
-            //Mark middle of line
-            Point midPoint = new Point();
-            midPoint.x = (topLeft.x + topRight.x) / 2;
-            midPoint.y = 20 +  (topLeft.y + topRight.y) / 2;
-            Imgproc.drawMarker(mShow, midPoint, COLOR_CYAN, 5, 50, 4);
-        }
 
         double trackMidPx = (leftInnerEdgePx + rightInnerEdgePx) / 2;
-
-        double currentErr = PxToNormal(trackMidPx, mShow.cols());
-
+        double currentErr = PxToNormal(trackMidPx, imgDisplay.cols());
         double diffErr = currentErr - oldErr;
+        oldErr = currentErr;
+        errIntegral = errIntegral + currentErr / 50;
 
         //Quick and dirty PID
-        targetSteer = (currentErr * kP ) + (steerIntegral * kI) + (diffErr * kD);
+        //TODO Implement a time delta value
+        targetSteer = (currentErr * kP ) + (errIntegral * kI) + (diffErr * kD);
 
         if (targetSteer > 1) targetSteer = 1;
         if (targetSteer < -1) targetSteer = -1;
 
         //Draw markers
         Point wheelAngleMarker = new Point();
-        wheelAngleMarker.x = NormalToPx(targetSteer, mShow.cols());
-        wheelAngleMarker.y = 10;
-        Imgproc.drawMarker(mShow, wheelAngleMarker, COLOR_BLACK, 1, 24, 5);
-        Imgproc.drawMarker(mShow, wheelAngleMarker, COLOR_WHITE, 1, 20, 2);
+        wheelAngleMarker.x = NormalToPx(targetSteer, imgDisplay.cols());
+        wheelAngleMarker.y = 12;
+        Imgproc.drawMarker(imgDisplay, wheelAngleMarker, COLOR_BLACK, 1, 24, 5);
+        Imgproc.drawMarker(imgDisplay, wheelAngleMarker, COLOR_WHITE, 1, 20, 2);
 
-
-        ;
-
-        Imgproc.rectangle(
-                mShow,
-                new Rect(0,mShow.rows()-40,200, 40),
+        Imgproc.rectangle(imgDisplay,
+                new Rect(0,0,220, 40),
                 COLOR_WHITE,-1);
-        Imgproc.putText(mShow,
+        Imgproc.putText(imgDisplay,
                 String.format("%3.2f", targetSteer),
-                new Point(30, mShow.rows() - 10),
+                new Point(  10, 30),
                 0, 1, COLOR_BLACK,2);
 
-        oldErr = currentErr;
-        return mShow;
+        return imgDisplay;
     }
 
     public Rect ContourToRect(List<MatOfPoint> contourList){
@@ -216,8 +170,8 @@ public class PathFinder {
     }
 
     public void onCameraViewStopped() {
-        mShow.release();
-        mProcess.release();
+        imgDisplay.release();
+        imgProcess.release();
     }
 
     public double PxToNormal(double value, int inputRange){

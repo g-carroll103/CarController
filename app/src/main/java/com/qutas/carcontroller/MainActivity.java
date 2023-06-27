@@ -2,32 +2,17 @@ package com.qutas.carcontroller;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CaptureRequest;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.View;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.opencv.android.CameraActivity;
 import org.opencv.android.JavaCamera2View;
-import org.opencv.android.JavaCameraView;
-import org.opencv.android.OpenCVLoader;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
-import org.opencv.core.Point;
-import org.opencv.core.Rect;
-import org.opencv.core.Scalar;
-import org.opencv.engine.OpenCVEngineInterface;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.osgi.OpenCVInterface;
-import org.opencv.osgi.OpenCVNativeLoader;
 
 
 import java.util.Collections;
@@ -43,7 +28,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     JavaCamera2View camPreview;
     TimerTask tt = TimerRoutine();
     Timer tmr;
-    boolean colorChecking = true;
+    boolean colorChecking = false;
 
     @Override
     protected List<? extends CameraBridgeViewBase> getCameraViewList() {
@@ -67,8 +52,8 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         //Views for displaying app output
         servoBox = findViewById(R.id.textOutput);
         //
-
         dc = new DriveControl(servoBox);
+        //Connect to the USB device and output commands
         dc.InitPort((UsbManager) getSystemService(Context.USB_SERVICE));
 
         //Make sure timer is configured - crashes if re-scheduling existing task
@@ -76,6 +61,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             tmr = new Timer();
             tmr.scheduleAtFixedRate(tt, 250, 50);
         }
+        //Restart camera preview
         camPreview.enableView();
     }
 
@@ -97,10 +83,13 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         dc.SetControlsA(0.27f, (float)(pf.targetSteer) );
         if (colorChecking) {
+            Mat rgbImage = inputFrame.rgba();
 
+            /*
             Scalar black = new Scalar(0,0,0);
             Scalar white = new Scalar(255,255,255);
-            Mat rgbImage = inputFrame.rgba();
+            Scalar blue = new Scalar(50,50,255);
+
             int sampleX = rgbImage.cols() / 2;
             int sampleY = rgbImage.rows() / 2;
             Mat rgbSample = rgbImage.submat(sampleX, sampleX+1, sampleY, sampleY+1);
@@ -112,30 +101,29 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
 
             Imgproc.circle(rgbImage,
                 new Point(sampleX, sampleY),
-                5,
-                black, 5
-
+                4,
+                black, 2
             );
 
-            Imgproc.rectangle(rgbImage, new Rect(sampleX-200, sampleY + 100, 400,200),white,-1);
+            Imgproc.rectangle(rgbImage, new Rect(0, rgbImage.rows() - 60, rgbImage.cols(),90),blue,-1);
 
             Imgproc.putText(
                 rgbImage,
-                String.format("H: %3.1f S: %3.1f V: %3.1f", hsvValue[0],hsvValue[1],hsvValue[2]),
-                new Point(sampleX-190, sampleY+130),
+                String.format("H: %3.0f  S: %3.0f  V: %3.0f", hsvValue[0],hsvValue[1],hsvValue[2]),
+                new Point(sampleX-200, rgbImage.rows() - 35),
                 0,
                 0.9,
                 black
             );
             Imgproc.putText(
-                    rgbImage,
-                    String.format("R: %3.1f G: %3.1f B: %3.1f", rgbValue[0],rgbValue[1],rgbValue[2]),
-                    new Point(sampleX-190, sampleY+170),
-                    0,
-                    0.9,
-                    black
+                rgbImage,
+                String.format("R: %3.0f  G: %3.0f  B: %3.0f", rgbValue[0],rgbValue[1],rgbValue[2]),
+                new Point(sampleX-200, rgbImage.rows()- 10),
+                0,
+                0.9,
+                black
             );
-
+            */
             return rgbImage;
 
         } else {
@@ -157,18 +145,21 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     }
 
     public TimerTask TimerRoutine(){
+        //This timer repeatedly calls the drive controller update function
         return new TimerTask() {
             @Override
             public void run() {
-                // Write to serial port
+                // Write current command to serial port
                 dc.WriteCommand();
             }//end run
         }; //end new timertask
     } //end timerroutine
-    //Old Code
+
     // Keyboard input control handling
+
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
+        //Whenever a key input is released, reset that control to 0:
         switch (keyCode) {
             //Steering controls
             case KeyEvent.KEYCODE_DPAD_LEFT:
@@ -176,7 +167,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             case KeyEvent.KEYCODE_DPAD_RIGHT:
             case KeyEvent.KEYCODE_D:
                 dc.SetSteerM(0);
-                servoBox.setText(dc.GetControlString());
+                servoBox.setText(dc.GetPrintableControlString());
                 return true;
 
             //Throttle controls
@@ -185,8 +176,10 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             case KeyEvent.KEYCODE_S:
             case KeyEvent.KEYCODE_DPAD_DOWN:
                 dc.SetThrottleM(0);
-                servoBox.setText(dc.GetControlString());
+                servoBox.setText(dc.GetPrintableControlString());
                 return true;
+
+            //If the keycode isn't recognised:
             default:
                 return super.onKeyUp(keyCode, event);
         }
@@ -194,36 +187,42 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        //Handle keydown commands
         switch (keyCode) {
 
             //If a steering button was pressed
             case KeyEvent.KEYCODE_A:
             case KeyEvent.KEYCODE_DPAD_LEFT:
                 dc.SetSteerM(-1);
-                servoBox.setText(dc.GetControlString());
+                servoBox.setText(dc.GetPrintableControlString());
                 return true;
             case KeyEvent.KEYCODE_D:
             case KeyEvent.KEYCODE_DPAD_RIGHT:
                 dc.SetSteerM(1);
-                servoBox.setText(dc.GetControlString());
+                servoBox.setText(dc.GetPrintableControlString());
                 return true;
+
             //Throttle controls
             case KeyEvent.KEYCODE_W:
             case KeyEvent.KEYCODE_DPAD_UP:
                 dc.SetThrottleM(1);
-                servoBox.setText(dc.GetControlString());
+                servoBox.setText(dc.GetPrintableControlString());
                 return true;
             case KeyEvent.KEYCODE_S:
             case KeyEvent.KEYCODE_DPAD_DOWN:
                 dc.SetThrottleM(-1);
-                servoBox.setText(dc.GetControlString());
+                servoBox.setText(dc.GetPrintableControlString());
                 return true;
+
+            //Automation controls:
             case KeyEvent.KEYCODE_M:
                 dc.autonomousControl = false;
                 return true;
             case KeyEvent.KEYCODE_I:
                 dc.autonomousControl = true;
                 return true;
+
+            //If the keycode isn't recognised:
             default:
                 return super.onKeyUp(keyCode, event);
         }

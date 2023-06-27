@@ -12,26 +12,24 @@
 
     <TextView
         android:id="@+id/textOutput"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
         android:background="@color/white"
-        android:gravity="center_horizontal|center_vertical"
+        android:gravity="center_horizontal|top"
         android:text="textOutput"
         android:textColor="@color/black"
         app:layout_constraintBottom_toTopOf="@+id/javaCamera2View"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="173dp" />
 
     <org.opencv.android.JavaCamera2View
         android:id="@+id/javaCamera2View"
-        android:layout_width="320dp"
-        android:layout_height="240dp"
-        android:layout_marginTop="60dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="0dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.494"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
+        app:layout_constraintTop_toBottomOf="@+id/textOutput" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

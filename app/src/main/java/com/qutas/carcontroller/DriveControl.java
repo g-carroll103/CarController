@@ -40,14 +40,17 @@ public class DriveControl {
     }
 
     public void SetSteerM(float str) {
+        //Updates the steering keyboard input, preserving the prior throttle setting
          SetControlsM(this.throttleM, str);
     }
 
     public void SetThrottleM(float thr) {
+        //Updates the throttle keyboard input, preserving the prior steer setting
          SetControlsM(thr, this.steerM);
     }
 
     public void SetControlsM(float thr, float str) {
+        //Updates the steering keyboard input, preserving the prior throttle setting
         steerM = str;
         throttleM = thr;
     }
@@ -57,12 +60,12 @@ public class DriveControl {
         throttleA = thr;
     }
 
-    public String GetControlString() {
-
+    public String GetPrintableControlString() {
+        //Prints the current autonomous and manual controls, plus the actual control values
         String strAutonomous = String.format("A: %3.2f, %3.2f", throttleA, steerA);
         String strManual =     String.format("M: %3.2f, %3.2f", throttleM, steerM);
 
-        String controlMode = "";
+        String controlMode;
         if (autonomousControl){
             controlMode = "A";
         }
@@ -76,7 +79,9 @@ public class DriveControl {
     }
 
     public void WriteCommand() {
-        //Convert float inputs to servo microseconds out
+        //Updates the microcontroller pwm values
+
+        //Check whether to use autonomous or manual controls:
         if (autonomousControl){
             throttleMicros = servoMiddle + (int) (throttleScale * throttleA);
             steerMicros = servoMiddle + (int) (steerScale * steerA);
@@ -85,30 +90,34 @@ public class DriveControl {
             throttleMicros = servoMiddle + (int) (throttleScale * throttleM);
             steerMicros = servoMiddle + (int) (steerScale * steerM);
         }
+        //Convert the values to plaintext to print
         String stringCommand = String.format("%4d,%4d\n", throttleMicros, steerMicros);
         try {
+                //Prints the command with a timeout of 100ms:
                 port.write(stringCommand.getBytes(StandardCharsets.UTF_8), 100);
             } catch (Exception ignore) {
         }
     }
 
     public void SetAppState(State state){
+        //Update the app state and background colour
         appState = state;
         switch (appState) {
-            case STARTUP:
+            case STARTUP -> {
                 outText.setBackgroundColor(0x7F7F7F);
                 return;
-            case CONNECTED:
+            }
+            case CONNECTED -> {
                 outText.setBackgroundColor(0xFF0000);
                 return;
-            case NO_UART:
-                outText.setBackgroundColor(0x7F7F7F);
+            }
+            case NO_UART -> outText.setBackgroundColor(0x7F7F7F);
         }
     }
 
     public boolean InitPort(UsbManager manager) {
-        // Find all available drivers from attached devices.
 
+        // Find all available drivers from attached devices.
         List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
         if (availableDrivers.isEmpty()) {
             SetAppState(State.NO_UART);
@@ -127,19 +136,25 @@ public class DriveControl {
 
         // Set up port for UART driver
         try {
-            port = driver.getPorts().get(0); // Most devices have just one port (port 0)
+            // Most devices have just one port (port 0)
+            port = driver.getPorts().get(0);
+            // Opens the port with commonly supported connections
             port.open(connection);
             port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+
         } catch (Exception e) {
+            //If the connection fails:
             SetAppState(State.NO_UART);
             Log.w("Err initialising port: ", e.toString());
             return false;
         }
+        //If no errors occurred, return a success message
         SetAppState(State.CONNECTED);
         return true;
     }
 
     public void ClosePort() {
+        //Cleans up and closes the serial port output
         if (port != null){
             try {
                 autonomousControl = false;
