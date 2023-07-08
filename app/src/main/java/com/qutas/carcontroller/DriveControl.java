@@ -78,7 +78,7 @@ public class DriveControl {
         return strAutonomous + "\n" + strManual + "\n" + strOut;
     }
 
-    public void WriteCommand() {
+    public void WriteDriveCommand() {
         //Updates the microcontroller pwm values
 
         //Check whether to use autonomous or manual controls:
@@ -91,7 +91,9 @@ public class DriveControl {
             steerMicros = servoMiddle + (int) (steerScale * steerM);
         }
         //Convert the values to plaintext to print
-        String stringCommand = String.format("%4d,%4d\n", throttleMicros, steerMicros);
+        //Changed to be compatible with James' control script
+        String stringCommand = String.format("T%4d\tS%4d\n", throttleMicros, steerMicros);
+
         try {
                 //Prints the command with a timeout of 100ms:
                 port.write(stringCommand.getBytes(StandardCharsets.UTF_8), 100);
@@ -159,7 +161,7 @@ public class DriveControl {
             try {
                 autonomousControl = false;
                 SetControlsM(0, 0);
-                WriteCommand();
+                WriteDriveCommand();
                 port.close();
             } catch (Exception ignored) {
             }
