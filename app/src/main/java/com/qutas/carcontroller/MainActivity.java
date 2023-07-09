@@ -6,6 +6,7 @@ import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.WindowManager;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -31,8 +32,9 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     TimerTask tt = TimerRoutine();
     Timer tmr;
     boolean colorChecking = false;
+    static final float standardThrottle = 0.27f;
 
-    // UI Function defi nitions:
+    // UI Function definitions:
     @Override
     protected List<? extends CameraBridgeViewBase> getCameraViewList() {
         // Returns a list of available cameras
@@ -45,16 +47,39 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     protected void onCreate(Bundle savedInstance) {
         //Runs when the UI window is created:
         super.onCreate(savedInstance);
-        setContentView(R.layout.activity_main);
-        camPreview = findViewById(R.id.javaCamera2View);
-        pf = new PathFinder(camPreview, this);
-        camPreview.setCvCameraViewListener(this);
-        camPreview.setMaxFrameSize(640, 480);
+        // keep the screen on - NO SLEEP! will drain battery if app not closed
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        Switch modeToggle = findViewById(R.id.switch1);
-        modeToggle.setOnCheckedChangeListener((buttonView, isChecked) -> colorChecking = isChecked);
+        // load the main activity
+        setContentView(R.layout.activity_main);
+
+        // retrieve the camera preview object
+        camPreview = findViewById(R.id.javaCamera2View);
+
+        pf = new PathFinder(camPreview, this);
+        // tell the camera preview (which gets the camera frames)
+        // to use this class for its callbacks
+        camPreview.setCvCameraViewListener(this);
+        // limit size of frame
+        camPreview.setMaxFrameSize(640*2, 480*2);
+        camPreview.enableFpsMeter();
+
+        // set up switches
+        ((Switch)findViewById(R.id.debugSwitch))
+                .setOnCheckedChangeListener((buttonView, isChecked) -> colorChecking = isChecked);
+        ((Switch)findViewById(R.id.ledOnSwitch))
+                .setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if(dc != null)
+                        dc.enableLedStrip = isChecked;
+                });
+        ((Switch)findViewById(R.id.competionLedSwitch))
+                .setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if(dc != null)
+                        dc.ledCompetitionMode = isChecked;
+                });
     }
 
+    // visibility change signals from Android
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onResume() {
@@ -178,16 +203,15 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         pf.onCameraViewStopped();
     }
 
+    // callback from cameraview object
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         if (colorChecking) {
-            // Call colour detection/analysis func
-            Mat imgOutput = pf.GetColourValue(inputFrame.rgba());
-            //Show the marked up image values
-            return imgOutput;
+            // Call colour detection/analysis func and show the marked up image values
+            return pf.GetColourValue(inputFrame.rgba());
         } else {
             //Run Pathfinder function, display annotated image
-            dc.SetControlsA(0.27f, (float) (pf.targetSteer));
+            dc.SetControlsA(standardThrottle, (float) (pf.targetSteer));
 
             return pf.FindPath(inputFrame);
         }
@@ -200,6 +224,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             public void run() {
                 // Write current command to serial port
                 dc.WriteDriveCommand();
+                infoBox.setText(dc.GetDriveCommand());
             }//end run
         }; //end new timertask
     } //end timerroutine

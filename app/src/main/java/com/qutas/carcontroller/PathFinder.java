@@ -1,10 +1,11 @@
 package com.qutas.carcontroller;
 
 import static com.qutas.carcontroller.Colors.COLOR_BLACK;
-import static com.qutas.carcontroller.Colors.COLOR_GREEN;
 import static com.qutas.carcontroller.Colors.COLOR_PURPLE;
+import static com.qutas.carcontroller.Colors.COLOR_RED;
 import static com.qutas.carcontroller.Colors.COLOR_WHITE;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.Log;
 import android.view.SurfaceView;
@@ -20,10 +21,12 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.List;
 
+@SuppressLint("DefaultLocale")
 public class PathFinder {
 
     final String TAG = "PathFinder";
@@ -33,8 +36,8 @@ public class PathFinder {
     private ColorBlobDetector detectorPath;
 
     //Any hue, brightness between 60 and 255, saturation between 0 and 120
-    private final Scalar ROAD_MIN = new Scalar(000, 50, 0);
-    private final Scalar ROAD_MAX = new Scalar(255, 255, 140);
+    private final Scalar ROAD_MIN = new Scalar(120, 180, 80);
+    private final Scalar ROAD_MAX = new Scalar(140, 255, 255);
 
     private Mat imgDisplay;
     private Mat imgProcess;
@@ -76,6 +79,8 @@ public class PathFinder {
         detectorPath = new ColorBlobDetector();
         this.callbackContext = callbackContext;
 
+        cameraHandler.getCameraDistance();
+        // TODO: perhaps use ultrawide cam?
         cameraHandler.setCameraIndex(0);
         this.cameraHandler = cameraHandler;
 
@@ -106,8 +111,9 @@ public class PathFinder {
         Imgproc.line(imgDisplay, new Point(0, upperRow), new Point(imgWidthPx, upperRow), Colors.COLOR_PURPLE, 3);
 
         //Crop processing image to below the horizon line
-        imgProcess = imgDisplay.submat(upperRow, imgDisplay.rows(), 0, imgDisplay.cols());
-
+        Mat imgCropped = imgDisplay.submat(upperRow, imgDisplay.rows(), 0, imgDisplay.cols());
+        Mat imgProcess = new Mat();
+        Imgproc.blur(imgCropped, imgProcess, new Size(10, 10));
         //Get contour of open road, not including any coloured regions
         List<MatOfPoint> contourList = detectorPath
                 .Load(imgProcess)
@@ -125,7 +131,7 @@ public class PathFinder {
         //Imgproc.line(imgDisplay, origin, wheelAngleMarker, COLOR_PURPLE, 2);
 
         // Display contours for debugging
-        Imgproc.drawContours(imgDisplay, contourList, -1, COLOR_PURPLE, 2);
+        Imgproc.drawContours(imgDisplay, contourList, -1, COLOR_RED, Imgproc.FILLED);
 
         //Draw output text
         Imgproc.rectangle(imgDisplay,
@@ -140,7 +146,7 @@ public class PathFinder {
 
         //Placeholder estimate of time between image frames
         //TODO: Implement an actual delta-time function
-        final double delta_time = 1/50;
+        final double delta_time = 1f/50;
 
         double diffErr = (error - oldErr) / delta_time;
         oldErr = error;
@@ -164,7 +170,7 @@ public class PathFinder {
         Mat rgb1x1 = rgbImage.submat(sampleY, sampleY+1, sampleX, sampleX+1);
         //Log.w("PathFinder", "GetColourValue 1x1 size: " + String.format("%d x %d",rgb1x1.rows(),rgb1x1.cols()));
         Mat hsv1x1 = rgb1x1.clone();
-        Imgproc.cvtColor(rgb1x1, hsv1x1, Imgproc.COLOR_RGB2HLS_FULL);
+        Imgproc.cvtColor(rgb1x1, hsv1x1, Imgproc.COLOR_RGB2HSV_FULL);
 
         //Get the RGB values of the centre pixel
         double[] rgbValue = rgb1x1.get(0,0);
