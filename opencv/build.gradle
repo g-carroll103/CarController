@@ -119,7 +119,6 @@ android {
         targetCompatibility JavaVersion.current()
     }
 
-    
 
     buildTypes {
         debug {
