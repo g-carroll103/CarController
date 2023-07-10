@@ -9,6 +9,7 @@ import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.WindowManager;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -34,6 +35,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     TimerTask tt = TimerRoutine();
     Timer tmr;
     boolean colorChecking = false;
+    static final float standardThrottle = 0.27f;
 
     // UI Function definitions:
     @Override
@@ -50,6 +52,9 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         //Runs when the UI window is created:
         super.onCreate(savedInstance);
 
+        // keep the screen on - NO SLEEP! will drain battery if app not closed
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         setContentView(R.layout.activity_main);
         //Get reference to camera preview widget
         Log.i("Main.onCreate","assigning camPreview to javaCVCameraView");
@@ -62,9 +67,19 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         //Get handles to UI widgets:
         infoBox = findViewById(R.id.textOutput);
 
-        Switch modeToggle = findViewById(R.id.switch1);
-        //Set handler event for toggle button
-        modeToggle.setOnCheckedChangeListener((buttonView, isChecked) -> colorChecking = isChecked);
+        // set up switches
+        ((Switch)findViewById(R.id.debugSwitch))
+                .setOnCheckedChangeListener((buttonView, isChecked) -> colorChecking = isChecked);
+        ((Switch)findViewById(R.id.ledOnSwitch))
+                .setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if(dc != null)
+                        dc.enableLedStrip = isChecked;
+                });
+        ((Switch)findViewById(R.id.competionLedSwitch))
+                .setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if(dc != null)
+                        dc.ledCompetitionMode = isChecked;
+                });
 
         //Create Drive Controller, pass handle of textbox:
         dc = new DriveControl(infoBox);
@@ -92,10 +107,9 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         } catch (CameraAccessException e) {
             throw new RuntimeException(e);
         }
-
-
     }
 
+    // visibility change signals from Android
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onResume() {
@@ -211,6 +225,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         pf.onCameraViewStopped();
     }
 
+    // callback from cameraview object
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame frameIn) {
 
@@ -240,6 +255,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             public void run() {
                 // Write current command to serial port
                 dc.WriteDriveCommand();
+                infoBox.setText(dc.GetDriveCommand());
             }//end run
         }; //end new timertask
     } //end timerroutine

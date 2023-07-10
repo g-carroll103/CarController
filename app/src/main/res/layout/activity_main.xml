@@ -12,8 +12,8 @@
 
     <TextView
         android:id="@+id/textOutput"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="383dp"
+        android:layout_height="49dp"
         android:background="@android:color/holo_red_light"
         android:gravity="fill_horizontal|top|start"
         android:outlineAmbientShadowColor="@color/white"
@@ -21,17 +21,33 @@
         android:outlineSpotShadowColor="@color/white"
         android:text="textOutput"
         android:textColor="@color/black"
-        app:layout_constraintBottom_toBottomOf="@+id/switch1"
-        app:layout_constraintEnd_toStartOf="@+id/switch1"
+        app:layout_constraintEnd_toStartOf="@+id/ledOnSwitch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Switch
-        android:id="@+id/switch1"
+        android:id="@+id/debugSwitch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Mode"
+        android:text="Debug"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Switch
+        android:id="@+id/competionLedSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Competion LEDs"
+        app:layout_constraintEnd_toStartOf="@+id/debugSwitch"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Switch
+        android:id="@+id/ledOnSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:text="LEDs on"
+        app:layout_constraintEnd_toStartOf="@+id/competionLedSwitch"
         app:layout_constraintTop_toTopOf="parent" />
 
     <org.opencv.android.JavaCamera2View
@@ -41,6 +57,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switch1" />
+        app:layout_constraintTop_toBottomOf="@+id/textOutput" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

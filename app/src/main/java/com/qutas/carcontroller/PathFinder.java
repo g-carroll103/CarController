@@ -21,6 +21,7 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.List;
 
+@SuppressLint("DefaultLocale")
 public class PathFinder {
 
     final String TAG = "PathFinder";
@@ -197,7 +198,7 @@ public class PathFinder {
 
         //Placeholder estimate of time between image frames
         //TODO: Implement an actual delta-time function
-        final double delta_time = 1 / 50;
+        final double delta_time = 1.0/50;
 
         double diffErr = (error - oldErr) / delta_time;
         oldErr = error;
@@ -222,7 +223,7 @@ public class PathFinder {
         Mat rgb1x1 = rgbImage.submat(sampleY, sampleY + 1, sampleX, sampleX + 1);
         //Log.w("PathFinder", "GetColourValue 1x1 size: " + String.format("%d x %d",rgb1x1.rows(),rgb1x1.cols()));
         Mat hsv1x1 = rgb1x1.clone();
-        Imgproc.cvtColor(rgb1x1, hsv1x1, Imgproc.COLOR_RGB2HLS_FULL);
+        Imgproc.cvtColor(rgb1x1, hsv1x1, Imgproc.COLOR_RGB2HSV_FULL);
 
         //Get the RGB values of the centre pixel
         double[] rgbValue = rgb1x1.get(0, 0);

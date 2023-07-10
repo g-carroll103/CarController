@@ -1,22 +1,23 @@
 package com.qutas.carcontroller;
 
+import android.annotation.SuppressLint;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
-
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Timer;
 import android.widget.TextView;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+@SuppressLint("DefaultLocale")
 public class DriveControl {
     UsbSerialPort port;
-    Timer tmr;
     TextView outText;
+
     enum State {
         STARTUP,
         CONNECTED,
@@ -24,18 +25,40 @@ public class DriveControl {
         NO_UART
     }
 
+    enum LedMode {
+        LED_MODE_OFF,
+        LED_MODE_AUTO,
+        LED_MODE_AUDIO,
+        LED_MODE_COMP
+    }
+
+    enum CarMode {
+        CAR_MODE_STOPPED,
+        CAR_MODE_STOPPED_TIMEOUT,
+        CAR_MODE_MANUAL,
+        CAR_MODE_AUTO
+    }
+
     State appState = State.STARTUP;
 
-    final int servoMiddle = 1500;
+    // servo control values - neutral (midpoint) and range from midpoint
+    final int servoNeutral = 1000;
     final int steerScale = -300;
     final int throttleScale = 200;
+    // autonomous or manual?
     boolean autonomousControl = false;
+    // LED strip controls
+    boolean enableLedStrip = true;
+    // audio pulse for LEDs
+    int audioPulseStrength = 0;
+    boolean ledCompetitionMode = false;
+    boolean enableAudioPulse = false;
+    // steering/throttle requests and real value
     float throttleA = 0, steerA = 0;
     float throttleM = 0, steerM = 0;
-    int throttleMicros = 0, steerMicros = 0;
-    // Servo midpoint in micros
+    int throttleServoValue = 0, steerServoValue = 0;
 
-    public DriveControl(TextView outText){
+    public DriveControl(TextView outText) {
         this.outText = outText;
     }
 
@@ -63,57 +86,67 @@ public class DriveControl {
     public String GetPrintableControlString() {
         //Prints the current autonomous and manual controls, plus the actual control values
         String strAutonomous = String.format("A: %3.2f, %3.2f", throttleA, steerA);
-        String strManual =     String.format("M: %3.2f, %3.2f", throttleM, steerM);
+        String strManual = String.format("M: %3.2f, %3.2f", throttleM, steerM);
 
-        String controlMode;
-        if (autonomousControl){
-            controlMode = "A";
-        }
-        else
-        {
-            controlMode = "M";
-        }
-        String strOut = String.format("%s, %d, %d", controlMode, throttleMicros, steerMicros);
+        String controlMode = autonomousControl ? "A" : "M";
+        String strOut = String.format("%s, %d, %d", controlMode, throttleServoValue, steerServoValue);
 
         return strAutonomous + "\n" + strManual + "\n" + strOut;
     }
 
-    public void WriteDriveCommand() {
-        //Updates the microcontroller pwm values
-
+    public String GetDriveCommand() {
+        // determines new micro update string
+        throttleServoValue = servoNeutral;
+        steerServoValue = servoNeutral;
         //Check whether to use autonomous or manual controls:
-        if (autonomousControl){
-            throttleMicros = servoMiddle + (int) (throttleScale * throttleA);
-            steerMicros = servoMiddle + (int) (steerScale * steerA);
+        if (autonomousControl) {
+            throttleServoValue += (int) (throttleScale * throttleA);
+            steerServoValue += (int) (steerScale * steerA);
+        } else {
+            throttleServoValue += (int) (throttleScale * throttleM);
+            steerServoValue += (int) (steerScale * steerM);
         }
-        else {
-            throttleMicros = servoMiddle + (int) (throttleScale * throttleM);
-            steerMicros = servoMiddle + (int) (steerScale * steerM);
-        }
-        //Convert the values to plaintext to print
-        //Changed to be compatible with James' control script
-        String stringCommand = String.format("T%4d\tS%4d\n", throttleMicros, steerMicros);
 
+        //CarMode carMode =
+        CarMode carMode;
+        if (appState != State.CONNECTED)
+            carMode = CarMode.CAR_MODE_STOPPED;
+        else if (!autonomousControl)
+            carMode = CarMode.CAR_MODE_MANUAL;
+        else
+            carMode = CarMode.CAR_MODE_AUTO;
+
+        LedMode ledMode;
+        if (!enableLedStrip)
+            ledMode = LedMode.LED_MODE_OFF;
+        else if (ledCompetitionMode && autonomousControl)
+            ledMode = LedMode.LED_MODE_COMP;
+        else if (enableAudioPulse)
+            ledMode = LedMode.LED_MODE_AUDIO;
+        else
+            ledMode = LedMode.LED_MODE_AUTO;
+
+        // convert to format controller expects
+        return String.format("T%04d S%04d M%1d L%1d P%03d\n",
+                throttleServoValue, steerServoValue,
+                carMode.ordinal(), ledMode.ordinal(), audioPulseStrength);
+    }
+
+    public void WriteDriveCommand() {
+        //Updates the microcontroller servo positions
         try {
-                //Prints the command with a timeout of 100ms:
-                port.write(stringCommand.getBytes(StandardCharsets.UTF_8), 100);
-            } catch (Exception ignore) {
+            //Prints the command with a timeout of 100ms:
+            port.write(GetDriveCommand().getBytes(StandardCharsets.UTF_8), 100);
+        } catch (Exception ignore) {
         }
     }
 
-    public void SetAppState(State state){
+    public void SetAppState(State state) {
         //Update the app state and background colour
         appState = state;
         switch (appState) {
-            case STARTUP -> {
-                outText.setBackgroundColor(0x7F7F7F);
-                return;
-            }
-            case CONNECTED -> {
-                outText.setBackgroundColor(0xFF0000);
-                return;
-            }
-            case NO_UART -> outText.setBackgroundColor(0x7F7F7F);
+            case STARTUP, NO_UART -> outText.setBackgroundColor(0x7F7F7F);
+            case CONNECTED -> outText.setBackgroundColor(0xFF0000);
         }
     }
 
@@ -157,8 +190,9 @@ public class DriveControl {
 
     public void ClosePort() {
         //Cleans up and closes the serial port output
-        if (port != null){
+        if (port != null) {
             try {
+                SetAppState(State.STARTUP);
                 autonomousControl = false;
                 SetControlsM(0, 0);
                 WriteDriveCommand();
@@ -167,7 +201,6 @@ public class DriveControl {
             }
         }
     }
-
 
 
 }
