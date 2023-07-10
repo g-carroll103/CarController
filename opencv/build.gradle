@@ -90,21 +90,21 @@
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 def openCVersionName = "4.8.0"
-def openCVersionCode = ((4 * 100 + 8) * 100 + 0) * 10 + 0
+//def openCVersionCode = ((4 * 100 + 8) * 100 + 0) * 10 + 0
 
 println "OpenCV: " +openCVersionName + " " + project.buildscript.sourceFile
 
 android {
     namespace "org.opencv"
     
-    compileSdkVersion 26
+    compileSdkVersion 33
 
     defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 26
-
+        minSdk 30
+        targetSdk 33
 
         externalNativeBuild {
             cmake {
@@ -115,8 +115,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.current()
+        targetCompatibility JavaVersion.current()
     }
 
     
@@ -126,12 +126,16 @@ android {
             packagingOptions {
                 doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
             }
+            jniDebuggable true
+            debuggable true
+            renderscriptDebuggable true
+            versionNameSuffix openCVersionName
         }
         release {
             packagingOptions {
                 doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
             }
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
@@ -154,7 +158,6 @@ android {
     buildFeatures {
         aidl true
     }
-}
-
-dependencies {
+    ndkVersion '25.2.9519653'
+    buildToolsVersion '33.0.1'
 }
