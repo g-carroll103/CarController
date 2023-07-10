@@ -4,12 +4,14 @@ import static com.qutas.carcontroller.Colors.*;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.Log;
+import android.util.Pair;
 import android.view.View;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -19,6 +21,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @SuppressLint("DefaultLocale")
@@ -29,19 +32,25 @@ public class PathFinder {
     Context callbackContext;
 
     public ColorBlobDetector detectorPath;
-    //public ColorBlobDetector detectorBlack = new ColorBlobDetector();
-    //public ColorBlobDetector detectorFinishLine = new ColorBlobDetector();;
+    public ColorBlobDetector detectorWhite;
+    public ColorBlobDetector detectorBlack;
+    public ColorBlobDetector detectorFinishLine;
 
-    //Any hue, brightness between 60 and 255, saturation between 0 and 120
-    private final Scalar COLOR_MIN = new Scalar(0, 90, 80);
-    private final Scalar COLOR_MAX = new Scalar(255, 255, 255);
+    // HSV min/max limits
+    private final Scalar TRACK_MIN = new Scalar(0, 0, 0);
+    private final Scalar TRACK_MAX = new Scalar(255, 255, 255);
+
     private final Scalar BLACK_MIN = new Scalar(0, 0, 0);
-    private final Scalar BLACK_MAX = new Scalar(255, 255, 76);
+    private final Scalar BLACK_MAX = new Scalar(255, 255, 80);
+
+    private final Scalar WHITE_MIN = new Scalar(0, 0, 200);
+    private final Scalar WHITE_MAX = new Scalar(255, 60, 255);
 
     private final Scalar FINISH_LINE_MIN = new Scalar(50, 100, 255);
     private final Scalar FINISH_LINE_MAX = new Scalar(70, 255, 255);
 
     private Mat imgDisplay;
+    private Mat imgTempAlpha;
     private Mat imgProcess;
     private final double processHeight = 0;
 
@@ -93,6 +102,10 @@ public class PathFinder {
 
 
         detectorPath = new ColorBlobDetector();
+        detectorBlack = new ColorBlobDetector();
+        detectorWhite = new ColorBlobDetector();
+        detectorFinishLine = new ColorBlobDetector();
+
         this.callbackContext = callbackContext;
         this.cameraView.setVisibility(View.VISIBLE);
 
@@ -101,28 +114,35 @@ public class PathFinder {
     @SuppressLint("DefaultLocale")
     public Mat FindPath(Mat image) {
         imgDisplay = image;
-        double imgWidthPx = image.cols();
+        imgTempAlpha = imgDisplay.clone();
 
-        double leftInnerEdgePx = 0;
-        double rightInnerEdgePx = imgWidthPx;
-        Point topLeft = new Point();
-        topLeft.x = -1;
-        Point topRight = new Point();
-        topRight.x = -1;
+        final int imgWidthPx = image.cols();
+        final int imgHeightPx = image.rows();
 
-        //The camera image will include a horizon - ignore rows above this point
-        int upperRow = (int) (imgDisplay.height() * processHeight);
-        Imgproc.line(imgDisplay, new Point(0, upperRow), new Point(imgWidthPx, upperRow), Colors.COLOR_PURPLE, 3);
+        final double trackLocateStartX = imgWidthPx*0.5;
+        final double trackLocateStartY = imgHeightPx*0.95;
 
-        //Crop processing image to below the horizon line
-        imgProcess = imgDisplay.submat(upperRow, imgDisplay.rows(), 0, imgDisplay.cols());
+        imgProcess = imgDisplay.clone();
         //Blur image to denoise
-        Imgproc.blur(imgProcess, imgProcess, new Size(3,3));
+        Imgproc.blur(imgProcess, imgProcess, new Size(7,7));
+
+
         //Get contour of open road, not including any coloured regions
-        List<MatOfPoint> obstacleList = detectorPath
+        List<MatOfPoint> trackContours = detectorPath
                 .Load(imgProcess)
-                .IncludeRange(COLOR_MIN, COLOR_MAX)
-                .ExcludeRange(FINISH_LINE_MIN, FINISH_LINE_MAX)
+                .IncludeRange(TRACK_MIN, TRACK_MAX)
+                .GetContours();
+        List<MatOfPoint> blackContours = detectorBlack
+                .Load(imgProcess)
+                .IncludeRange(BLACK_MIN, BLACK_MAX)
+                .GetContours();
+        List<MatOfPoint> whiteContours = detectorWhite
+                .Load(imgProcess)
+                .IncludeRange(WHITE_MIN, WHITE_MAX)
+                .GetContours();
+        List<MatOfPoint> finishContours = detectorFinishLine
+                .Load(imgProcess)
+                .IncludeRange(FINISH_LINE_MIN, FINISH_LINE_MAX)
                 .GetContours();
 
         //List <MatOfPoint> blackRegions = detectorBlack.Load(imgProcess).IncludeRange(BLACK_MAX, BLACK_MIN).GetContours();
@@ -166,11 +186,11 @@ public class PathFinder {
         }
 
          */
-        double trackMidPx = (leftInnerEdgePx + rightInnerEdgePx) / 2;
+        //double trackMidPx = (leftInnerEdgePx + rightInnerEdgePx) / 2;
 
-        double currentErr = PxToNormal(trackMidPx, imgDisplay.cols());
+        //double currentErr = PxToNormal(trackMidPx, imgDisplay.cols());
 
-        targetSteer = SteeringControl(currentErr);
+        //targetSteer = SteeringControl(currentErr);
 
         //Draw Steering target marker
         //Point wheelAngleMarker = new Point( NormalToPx(targetSteer, imgDisplay.cols()), 12);
@@ -178,19 +198,71 @@ public class PathFinder {
         //Imgproc.line(imgDisplay, origin, wheelAngleMarker, COLOR_PURPLE, 2);
 
         // Display contours for debugging
+        Point trackLocateStart = new Point(trackLocateStartX, trackLocateStartY);
         int contourNum = 0;
-        for (MatOfPoint contour : obstacleList){
-            Imgproc.drawContours(imgDisplay, obstacleList, contourNum, COLOR_GREEN, 2);
-            Imgproc.putText(imgDisplay, String.valueOf(contourNum), ColorBlobDetector.GetCentroid(contour), Imgproc.FONT_HERSHEY_COMPLEX_SMALL, 1, COLOR_GREEN);
+        boolean trackContourFound = false;
+        for (MatOfPoint contour : trackContours){
+            if(Imgproc.pointPolygonTest(new MatOfPoint2f(contour.toArray()), trackLocateStart, false) > 0)
+            {
+                Imgproc.drawContours(imgTempAlpha, trackContours, contourNum, COLOR_GREEN, Imgproc.FILLED);
+                trackContourFound = true;
+                break;
+            }
             contourNum++;
         }
+        if(trackContourFound) {
+            final MatOfPoint trackContour = trackContours.get(contourNum);
+            final MatOfPoint2f trackContour2f = new MatOfPoint2f(trackContour.toArray());
+
+            boolean whiteFound = false, blackFound = false;
+            int whiteContourNum = 0, blackContourNum = 0;
+
+            ArrayList<Pair<Integer, Double>> containedWhiteContours = new ArrayList<>();
+            for(MatOfPoint contour : whiteContours)
+            {
+                if(Imgproc.pointPolygonTest(trackContour2f,
+                        ColorBlobDetector.GetCentroid(contour), false) > 0)
+                {
+                    final double area = Imgproc.contourArea(contour);
+                    containedWhiteContours.add(new Pair(whiteContourNum, area));
+                    //Imgproc.drawContours(imgTempAlpha, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
+                    //break;
+                }
+                whiteContourNum++;
+            }
+            double cArea = 0;
+            if(containedWhiteContours.size() > 0)
+            {
+                for(int i = 0; i < containedWhiteContours.size(); i++)
+                {
+                    Pair<Integer, Double> pair = containedWhiteContours.get(i);
+                    double a = pair.second.doubleValue();
+                    if(a > cArea)
+                    {
+                        cArea = a;
+                        whiteContourNum = pair.first.intValue();
+                    }
+                }
+            }
+            if(cArea > 0) {
+                Imgproc.drawContours(imgTempAlpha, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
+            }
+
+
+            // transparent overlay
+            final float alpha = 0.3f;
+            Core.addWeighted(imgDisplay, 1 - alpha, imgTempAlpha, alpha, 0, imgDisplay);
+        }
+
+        Imgproc.drawMarker(imgDisplay, trackLocateStart, new Scalar(255, 0, 255), Imgproc.MARKER_STAR);
 
         //Draw output text
         Imgproc.rectangle(imgDisplay,
                 new Rect(0, 0, 220, 40), COLOR_WHITE, -1);
         Imgproc.putText(imgDisplay,
-                String.format("%3d", obstacleList.size()),
+                String.format("%3d", trackContours.size()),
                 new Point(10, 30), 0, 1, COLOR_BLACK, 2);
+
         return imgDisplay;
     }
 
@@ -276,6 +348,9 @@ public class PathFinder {
     public void onCameraViewStopped() {
         imgDisplay = new Mat();
         imgDisplay.release();
+
+        imgTempAlpha = new Mat();
+        imgTempAlpha.release();
 
         imgProcess = new Mat();
         imgProcess.release();
