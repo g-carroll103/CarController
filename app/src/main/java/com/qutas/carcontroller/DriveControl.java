@@ -41,12 +41,12 @@ public class DriveControl {
 
     public void SetSteerM(float str) {
         //Updates the steering keyboard input, preserving the prior throttle setting
-         SetControlsM(this.throttleM, str);
+        steerM = str;
     }
 
     public void SetThrottleM(float thr) {
         //Updates the throttle keyboard input, preserving the prior steer setting
-         SetControlsM(thr, this.steerM);
+        throttleM = thr;
     }
 
     public void SetControlsM(float thr, float str) {
