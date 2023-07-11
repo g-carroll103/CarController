@@ -12,6 +12,7 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -31,26 +32,22 @@ public class PathFinder {
     CameraBridgeViewBase cameraView;
     Context callbackContext;
 
-    public ColorBlobDetector detectorPath;
-    public ColorBlobDetector detectorWhite;
-    public ColorBlobDetector detectorBlack;
-    public ColorBlobDetector detectorFinishLine;
+    public ColorContourContainer detectorTrack;
+    public ColorContourContainer detectorTrackHoles;
+    public ColorContourContainer detectorArrow;
+    public ColorContourContainer detectorFinishLine;
 
     // HSV min/max limits
-    private final Scalar TRACK_MIN = new Scalar(0, 0, 0);
-    private final Scalar TRACK_MAX = new Scalar(255, 255, 255);
+    private final Scalar TRACK_MIN = new Scalar(0, 0, 100);
+    private final Scalar TRACK_MAX = new Scalar(255, 40, 255);
 
-    private final Scalar BLACK_MIN = new Scalar(0, 0, 0);
-    private final Scalar BLACK_MAX = new Scalar(255, 255, 80);
+    private final Scalar ARROW_MIN = new Scalar(0, 0, 0);
+    private final Scalar ARROW_MAX = new Scalar(255, 50, 70);
 
-    private final Scalar WHITE_MIN = new Scalar(0, 0, 200);
-    private final Scalar WHITE_MAX = new Scalar(255, 60, 255);
+    private final Scalar FINISH_LINE_MIN = new Scalar(45, 110, 150);
+    private final Scalar FINISH_LINE_MAX = new Scalar(65, 200, 255);
 
-    private final Scalar FINISH_LINE_MIN = new Scalar(50, 100, 255);
-    private final Scalar FINISH_LINE_MAX = new Scalar(70, 255, 255);
-
-    private Mat imgDisplay;
-    private Mat imgTempAlpha;
+    private Mat mImgDisplay;
     private Mat imgProcess;
     private final double processHeight = 0;
 
@@ -101,49 +98,76 @@ public class PathFinder {
         //TODO: Camera AE and WB settings
 
 
-        detectorPath = new ColorBlobDetector();
-        detectorBlack = new ColorBlobDetector();
-        detectorWhite = new ColorBlobDetector();
-        detectorFinishLine = new ColorBlobDetector();
+        detectorTrack = new ColorContourContainer();
+        detectorTrackHoles = new ColorContourContainer();
+        detectorArrow = new ColorContourContainer();
+        detectorFinishLine = new ColorContourContainer();
 
         this.callbackContext = callbackContext;
         this.cameraView.setVisibility(View.VISIBLE);
 
     }//End constructor
 
+    public int FindLine(Mat imgProcess, Mat mImgDisplay, ColorContourContainer detector, double y)
+    {
+        int yPx = (int)y;
+        Mat mask = detector.mFilteredMask.clone();
+
+        int w = imgProcess.cols();
+        //int h = imgProcess.rows();
+
+        Mat line = new Mat(mask.rows(), mask.cols(), CvType.CV_8U, Scalar.all(0));
+        Imgproc.line(line, new Point(0, y), new Point(w, y), new Scalar(255), 1);
+        ColorContourContainer.O
+        Core.bitwise_and(mask, line, mask);
+
+        List<MatOfPoint> newContours = new ArrayList<>();
+        Imgproc.findContours(mask, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        double currentPos = w;
+        int contourIdx = 0;
+        int bestContour = -1;
+        for(MatOfPoint contour : newContours)
+        {
+            Point centroid = ColorContourContainer.GetCentroid(contour);
+            if(centroid.x < currentPos)
+            {
+                currentPos = centroid.x;
+                bestContour = contourIdx;
+            }
+            contourIdx++;
+        }
+
+        mask.release();
+        return (int)currentPos;
+    }
     @SuppressLint("DefaultLocale")
     public Mat FindPath(Mat image) {
-        imgDisplay = image;
-        imgTempAlpha = imgDisplay.clone();
+        mImgDisplay = image;
+        Mat mAlphaBuffer = mImgDisplay.clone();
 
         final int imgWidthPx = image.cols();
         final int imgHeightPx = image.rows();
 
         final double trackLocateStartX = imgWidthPx*0.5;
         final double trackLocateStartY = imgHeightPx*0.95;
+        final int trackStepIncrement = -10; // this many pixels in Y direction per step
 
-        imgProcess = imgDisplay.clone();
+        imgProcess = mImgDisplay.clone();
         //Blur image to denoise
         Imgproc.blur(imgProcess, imgProcess, new Size(7,7));
 
 
         //Get contour of open road, not including any coloured regions
-        List<MatOfPoint> trackContours = detectorPath
+        List<MatOfPoint> trackContours = detectorTrack
                 .Load(imgProcess)
                 .IncludeRange(TRACK_MIN, TRACK_MAX)
-                .GetContours();
-        List<MatOfPoint> blackContours = detectorBlack
-                .Load(imgProcess)
-                .IncludeRange(BLACK_MIN, BLACK_MAX)
-                .GetContours();
-        List<MatOfPoint> whiteContours = detectorWhite
-                .Load(imgProcess)
-                .IncludeRange(WHITE_MIN, WHITE_MAX)
                 .GetContours();
         List<MatOfPoint> finishContours = detectorFinishLine
                 .Load(imgProcess)
                 .IncludeRange(FINISH_LINE_MIN, FINISH_LINE_MAX)
                 .GetContours();
+
+        FindLine(imgProcess, mImgDisplay, detectorTrack, trackLocateStartY);
 
         //List <MatOfPoint> blackRegions = detectorBlack.Load(imgProcess).IncludeRange(BLACK_MAX, BLACK_MIN).GetContours();
 
@@ -204,28 +228,44 @@ public class PathFinder {
         for (MatOfPoint contour : trackContours){
             if(Imgproc.pointPolygonTest(new MatOfPoint2f(contour.toArray()), trackLocateStart, false) > 0)
             {
-                Imgproc.drawContours(imgTempAlpha, trackContours, contourNum, COLOR_GREEN, Imgproc.FILLED);
                 trackContourFound = true;
+                //Imgproc.drawContours(mAlphaBuffer, trackContours, contourNum, COLOR_GREEN, Imgproc.FILLED);
                 break;
             }
             contourNum++;
         }
         if(trackContourFound) {
+            detectorTrack.SelectContour(contourNum, false);
+            detectorTrack.OverlayMask(mAlphaBuffer, COLOR_RED);
+            //detectorTrack.SelectContour(contourNum, true);
             final MatOfPoint trackContour = trackContours.get(contourNum);
             final MatOfPoint2f trackContour2f = new MatOfPoint2f(trackContour.toArray());
 
-            boolean whiteFound = false, blackFound = false;
+            List<MatOfPoint> arrowContours = detectorArrow
+                    .Load(imgProcess)
+                    .IncludeRange(ARROW_MIN, ARROW_MAX)
+                    .Intersect(detectorTrack)
+                    .GetContours();
+            //Imgproc.drawContours(mImgDisplay, arrowContours, -1, COLOR_GREEN, Imgproc.FILLED);//*/
+
+            Imgproc.drawContours(mAlphaBuffer, finishContours, -1, COLOR_PURPLE, Imgproc.FILLED);
+            /*List<MatOfPoint> blackContours = detectorBlack
+                    .Load(imgProcess)
+                    .IncludeRange(BLACK_MIN, BLACK_MAX)
+                    .GetContours();*/
+
+            /*boolean whiteFound = false, blackFound = false;
             int whiteContourNum = 0, blackContourNum = 0;
 
             ArrayList<Pair<Integer, Double>> containedWhiteContours = new ArrayList<>();
             for(MatOfPoint contour : whiteContours)
             {
                 if(Imgproc.pointPolygonTest(trackContour2f,
-                        ColorBlobDetector.GetCentroid(contour), false) > 0)
+                        ColorContourContainer.GetCentroid(contour), false) > 0)
                 {
                     final double area = Imgproc.contourArea(contour);
                     containedWhiteContours.add(new Pair(whiteContourNum, area));
-                    //Imgproc.drawContours(imgTempAlpha, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
+                    //Imgproc.drawContours(mAlphaBuffer, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
                     //break;
                 }
                 whiteContourNum++;
@@ -245,25 +285,26 @@ public class PathFinder {
                 }
             }
             if(cArea > 0) {
-                Imgproc.drawContours(imgTempAlpha, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
-            }
+                Imgproc.drawContours(mAlphaBuffer, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
 
+            }//*/
 
             // transparent overlay
             final float alpha = 0.3f;
-            Core.addWeighted(imgDisplay, 1 - alpha, imgTempAlpha, alpha, 0, imgDisplay);
+            Core.addWeighted(mImgDisplay, 1 - alpha, mAlphaBuffer, alpha, 0, mImgDisplay);
         }
 
-        Imgproc.drawMarker(imgDisplay, trackLocateStart, new Scalar(255, 0, 255), Imgproc.MARKER_STAR);
+        Imgproc.drawMarker(mImgDisplay, trackLocateStart, new Scalar(255, 0, 255), Imgproc.MARKER_STAR, 30, 2);
 
         //Draw output text
-        Imgproc.rectangle(imgDisplay,
+        Imgproc.rectangle(mImgDisplay,
                 new Rect(0, 0, 220, 40), COLOR_WHITE, -1);
-        Imgproc.putText(imgDisplay,
+        Imgproc.putText(mImgDisplay,
                 String.format("%3d", trackContours.size()),
                 new Point(10, 30), 0, 1, COLOR_BLACK, 2);
 
-        return imgDisplay;
+        mAlphaBuffer.release();
+        return mImgDisplay;
     }
 
     public double SteeringControl(double error) {
@@ -346,11 +387,8 @@ public class PathFinder {
     }
 
     public void onCameraViewStopped() {
-        imgDisplay = new Mat();
-        imgDisplay.release();
-
-        imgTempAlpha = new Mat();
-        imgTempAlpha.release();
+        mImgDisplay = new Mat();
+        mImgDisplay.release();
 
         imgProcess = new Mat();
         imgProcess.release();

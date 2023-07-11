@@ -145,8 +145,13 @@ public class DriveControl {
         //Update the app state and background colour
         appState = state;
         switch (appState) {
-            case STARTUP, NO_UART -> outText.setBackgroundColor(0x7F7F7F);
-            case CONNECTED -> outText.setBackgroundColor(0xFF0000);
+            case STARTUP -> {
+                outText.setBackgroundColor(0x7F7F7F);
+            }
+            case CONNECTED -> {
+                outText.setBackgroundColor(0xFF0000);
+            }
+            default -> {}
         }
     }
 
