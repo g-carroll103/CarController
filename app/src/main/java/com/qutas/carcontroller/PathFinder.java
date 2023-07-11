@@ -4,7 +4,6 @@ import static com.qutas.carcontroller.Colors.*;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.Log;
-import android.util.Pair;
 import android.view.View;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -108,39 +107,37 @@ public class PathFinder {
 
     }//End constructor
 
-    public int FindLine(Mat imgProcess, Mat mImgDisplay, ColorContourContainer detector, double y)
+    public int FindLine(Mat imgProcess, Mat mImgDisplay, ColorContourContainer detector, double centre, double y)
     {
         int yPx = (int)y;
-        Mat mask = detector.mFilteredMask.clone();
 
         int w = imgProcess.cols();
         //int h = imgProcess.rows();
 
-        Mat line = new Mat(mask.rows(), mask.cols(), CvType.CV_8U, Scalar.all(0));
-        Imgproc.line(line, new Point(0, y), new Point(w, y), new Scalar(255), 3);
-        Core.bitwise_and(mask, line, mask);
-        //Imgproc.line(line, new Point(0, y), new Point(w, y), new Scalar(255), 5);
-        ColorContourContainer.OverlayMask(mImgDisplay, mask, COLOR_CYAN);
+        Mat line = detector.mFilteredMask.submat(yPx, yPx+5, 0, w);
+        Imgproc.line(mImgDisplay, new Point(0, y), new Point(w, y), COLOR_CYAN, 5);
 
         List<MatOfPoint> newContours = new ArrayList<>();
-        Imgproc.findContours(mask, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-        double currentPos = w;
+        Imgproc.findContours(line, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        double currentDist = w;
         int contourIdx = 0;
+        double currentPos = w;
         int bestContour = -1;
         for(MatOfPoint contour : newContours)
         {
             Point centroid = ColorContourContainer.GetCentroid(contour);
-            if(centroid.x < currentPos)
+            double diff = Math.abs(centroid.x - centre);
+            if(diff < currentDist)
             {
+                currentDist = diff;
                 currentPos = centroid.x;
                 bestContour = contourIdx;
             }
             contourIdx++;
         }
 
-        mask.release();
         Imgproc.drawMarker(mImgDisplay,new Point(currentPos, y), COLOR_WHITE, Imgproc.MARKER_TRIANGLE_DOWN, 30, 3);
-        return (int)currentPos;
+        return (int) currentPos;
     }
     @SuppressLint("DefaultLocale")
     public Mat FindPath(Mat image) {
@@ -151,8 +148,11 @@ public class PathFinder {
         final int imgHeightPx = image.rows();
 
         final double trackLocateStartX = imgWidthPx*0.5;
-        final double trackLocateStartY = imgHeightPx*0.95;
-        final int trackStepIncrement = -10; // this many pixels in Y direction per step
+        final double trackLocateStartY = imgHeightPx*0.8;
+        final int centreLocateIncrement = -40; // this many pixels in Y direction per step
+        final int centreLocateCount  = 10;
+        final double centreLocateWeightStart = 0.5;
+        final double centreLocateWeightEnd = 2-centreLocateWeightStart;
 
         imgProcess = mImgDisplay.clone();
         //Blur image to denoise
@@ -240,9 +240,20 @@ public class PathFinder {
             //detectorTrack.SelectContour(contourNum, true);
             final MatOfPoint trackContour = trackContours.get(contourNum);
             final MatOfPoint2f trackContour2f = new MatOfPoint2f(trackContour.toArray());
-            double xCenter = FindLine(imgProcess,mImgDisplay,detectorTrack,trackLocateStartY);
-            xCenter /= imgWidthPx;
-            Log.i("", String.format("%f", xCenter));
+            double xCentre = 0;
+            double prevCentre = imgWidthPx/2f;
+            for(int i = 0; i < centreLocateCount; i++)
+            {
+                double lerp = (double)i/(centreLocateCount-1);
+                double weight = (centreLocateWeightStart*(1-lerp))+(centreLocateWeightEnd*lerp);
+                xCentre += FindLine(imgProcess,mImgDisplay,detectorTrack,
+                        prevCentre, trackLocateStartY+(i*centreLocateIncrement))*weight;
+            }
+            xCentre /= centreLocateCount;
+            //xCentre /= imgWidthPx;
+
+            Imgproc.drawMarker(mImgDisplay, new Point(xCentre, imgHeightPx/2),
+                    COLOR_BLACK, Imgproc.MARKER_DIAMOND, 50, 10);
 
             List<MatOfPoint> arrowContours = detectorArrow
                     .Load(imgProcess)
