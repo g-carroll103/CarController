@@ -335,7 +335,7 @@ public class PathFinder {
                 }
             }
 
-            throttleOutput = finishStop ? 0 : 0.2;
+            throttleOutput = finishStop ? 0 : 1;
             steeringOutput = pid.Run(steeringRequest, 1.0/10);
 
             safetyStop = false;
