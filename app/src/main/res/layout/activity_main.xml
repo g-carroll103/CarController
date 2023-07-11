@@ -12,8 +12,8 @@
 
     <TextView
         android:id="@+id/textOutput"
-        android:layout_width="383dp"
-        android:layout_height="49dp"
+        android:layout_width="382dp"
+        android:layout_height="114dp"
         android:background="@android:color/holo_red_light"
         android:gravity="fill_horizontal|top|start"
         android:outlineAmbientShadowColor="@color/white"
@@ -57,6 +57,15 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textOutput" />
+        app:layout_constraintTop_toBottomOf="@+id/textOutput"
+        app:show_fps="false" />
 
-an</androidx.constraintlayout.widget.ConstraintLayout>
+    <TextView
+        android:id="@+id/dcStat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="testingblahblahblah"
+        tools:layout_editor_absoluteX="11dp"
+        tools:layout_editor_absoluteY="19dp" />
+
+    an</androidx.constraintlayout.widget.ConstraintLayout>

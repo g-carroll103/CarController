@@ -110,7 +110,7 @@ public class DriveControl {
 
         //CarMode carMode =
         CarMode carMode;
-        if (appState != State.CONNECTED || (autonomousControl && autoStop))
+        if (appState != State.CONNECTED)// || (autonomousControl && autoStop))
             carMode = CarMode.CAR_MODE_STOPPED;
         else if (!autonomousControl)
             carMode = CarMode.CAR_MODE_MANUAL;

@@ -31,6 +31,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     PathFinder pf;
     DriveControl dc;
     TextView infoBox;
+    TextView dcStatus;
     JavaCamera2View camPreview;
     TimerTask tt = TimerRoutine();
     Timer tmr;
@@ -65,6 +66,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         pf = new PathFinder(camPreview, this);
         //Get handles to UI widgets:
         infoBox = findViewById(R.id.textOutput);
+        dcStatus = findViewById(R.id.dcStat);
 
         // set up switches
         ((Switch)findViewById(R.id.debugSwitch))
@@ -80,6 +82,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
                         dc.ledCompetitionMode = isChecked;
                 });
 
+        dcStatus.setText("TESTING");
         //Create Drive Controller, pass handle of textbox:
         dc = new DriveControl(infoBox);
         //Connect to the USB device and output commands
@@ -253,6 +256,8 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
                 // Write current command to serial port
                 dc.WriteDriveCommand();
                 infoBox.setText(dc.GetDriveCommand());
+                String tmp = String.format("%s", dc.appState.toString());
+                dcStatus.setText("T");
             }//end run
         }; //end new timertask
     } //end timerroutine
