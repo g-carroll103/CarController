@@ -97,7 +97,7 @@ public class ColorContourContainer {
     {
         OverlayMask(img, mFilteredMask, color);
     }
-    public void OverlayMask(Mat img, Mat inMask, Scalar color)
+    static public void OverlayMask(Mat img, Mat inMask, Scalar color)
     {
         Mat colorMat = new Mat(inMask.rows(), inMask.cols(), CvType.CV_8UC4, color);
         Core.bitwise_or(img, colorMat, img, inMask);

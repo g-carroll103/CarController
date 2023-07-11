@@ -117,9 +117,10 @@ public class PathFinder {
         //int h = imgProcess.rows();
 
         Mat line = new Mat(mask.rows(), mask.cols(), CvType.CV_8U, Scalar.all(0));
-        Imgproc.line(line, new Point(0, y), new Point(w, y), new Scalar(255), 1);
-        ColorContourContainer.O
+        Imgproc.line(line, new Point(0, y), new Point(w, y), new Scalar(255), 3);
         Core.bitwise_and(mask, line, mask);
+        //Imgproc.line(line, new Point(0, y), new Point(w, y), new Scalar(255), 5);
+        ColorContourContainer.OverlayMask(mImgDisplay, mask, COLOR_CYAN);
 
         List<MatOfPoint> newContours = new ArrayList<>();
         Imgproc.findContours(mask, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -138,6 +139,7 @@ public class PathFinder {
         }
 
         mask.release();
+        Imgproc.drawMarker(mImgDisplay,new Point(currentPos, y), COLOR_WHITE, Imgproc.MARKER_TRIANGLE_DOWN, 30, 3);
         return (int)currentPos;
     }
     @SuppressLint("DefaultLocale")
@@ -166,8 +168,6 @@ public class PathFinder {
                 .Load(imgProcess)
                 .IncludeRange(FINISH_LINE_MIN, FINISH_LINE_MAX)
                 .GetContours();
-
-        FindLine(imgProcess, mImgDisplay, detectorTrack, trackLocateStartY);
 
         //List <MatOfPoint> blackRegions = detectorBlack.Load(imgProcess).IncludeRange(BLACK_MAX, BLACK_MIN).GetContours();
 
@@ -240,6 +240,9 @@ public class PathFinder {
             //detectorTrack.SelectContour(contourNum, true);
             final MatOfPoint trackContour = trackContours.get(contourNum);
             final MatOfPoint2f trackContour2f = new MatOfPoint2f(trackContour.toArray());
+            double xCenter = FindLine(imgProcess,mImgDisplay,detectorTrack,trackLocateStartY);
+            xCenter /= imgWidthPx;
+            Log.i("", String.format("%f", xCenter));
 
             List<MatOfPoint> arrowContours = detectorArrow
                     .Load(imgProcess)
