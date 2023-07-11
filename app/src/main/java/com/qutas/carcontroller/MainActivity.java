@@ -144,7 +144,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             case KeyEvent.KEYCODE_DPAD_RIGHT:
             case KeyEvent.KEYCODE_D:
                 dc.SetSteerM(0);
-                infoBox.setText(dc.GetPrintableControlString());
                 return true;
 
             //Throttle controls
@@ -153,7 +152,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             case KeyEvent.KEYCODE_S:
             case KeyEvent.KEYCODE_DPAD_DOWN:
                 dc.SetThrottleM(0);
-                infoBox.setText(dc.GetPrintableControlString());
                 return true;
 
             //If the keycode isn't recognised:
@@ -171,24 +169,20 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             case KeyEvent.KEYCODE_A:
             case KeyEvent.KEYCODE_DPAD_LEFT:
                 dc.SetSteerM(-1);
-                infoBox.setText(dc.GetPrintableControlString());
                 return true;
             case KeyEvent.KEYCODE_D:
             case KeyEvent.KEYCODE_DPAD_RIGHT:
                 dc.SetSteerM(1);
-                infoBox.setText(dc.GetPrintableControlString());
                 return true;
 
             //Throttle controls
             case KeyEvent.KEYCODE_W:
             case KeyEvent.KEYCODE_DPAD_UP:
                 dc.SetThrottleM(1);
-                infoBox.setText(dc.GetPrintableControlString());
                 return true;
             case KeyEvent.KEYCODE_S:
             case KeyEvent.KEYCODE_DPAD_DOWN:
                 dc.SetThrottleM(-1);
-                infoBox.setText(dc.GetPrintableControlString());
                 return true;
 
             //Automation controls:
@@ -203,6 +197,8 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             default:
                 return super.onKeyUp(keyCode, event);
         }
+        //infoBox.setText(dc.GetPrintableControlString());
+
     }
 
     @Override
