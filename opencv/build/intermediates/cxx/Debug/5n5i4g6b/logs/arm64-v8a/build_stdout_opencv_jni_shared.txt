@@ -1,2 +1,2 @@
-ninja: Entering directory `C:\Users\Guy\AndroidStudioProjects\CarController\opencv\.cxx\Debug\5n5i4g6b\arm64-v8a'
+ninja: Entering directory `C:\Users\jcnic\Android\CarController\opencv\.cxx\Debug\5n5i4g6b\arm64-v8a'
 ninja: no work to do.

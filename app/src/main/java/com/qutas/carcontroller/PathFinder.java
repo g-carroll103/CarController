@@ -1,8 +1,15 @@
 package com.qutas.carcontroller;
-import static com.qutas.carcontroller.Colors.*;
+
+import static com.qutas.carcontroller.Colors.COLOR_BLACK;
+import static com.qutas.carcontroller.Colors.COLOR_CYAN;
+import static com.qutas.carcontroller.Colors.COLOR_GREEN;
+import static com.qutas.carcontroller.Colors.COLOR_PURPLE;
+import static com.qutas.carcontroller.Colors.COLOR_RED;
+import static com.qutas.carcontroller.Colors.COLOR_WHITE;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.mtp.MtpConstants;
 import android.util.Log;
 import android.view.View;
 
@@ -11,7 +18,6 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -22,6 +28,7 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @SuppressLint("DefaultLocale")
@@ -35,6 +42,9 @@ public class PathFinder {
     public ColorContourContainer detectorTrackHoles;
     public ColorContourContainer detectorArrow;
     public ColorContourContainer detectorFinishLine;
+    boolean safetyStop = true;
+    boolean finishStop = false;
+
 
     // HSV min/max limits
     private final Scalar TRACK_MIN = new Scalar(0, 0, 100);
@@ -43,26 +53,21 @@ public class PathFinder {
     private final Scalar ARROW_MIN = new Scalar(0, 0, 0);
     private final Scalar ARROW_MAX = new Scalar(255, 50, 70);
 
-    private final Scalar FINISH_LINE_MIN = new Scalar(45, 110, 150);
-    private final Scalar FINISH_LINE_MAX = new Scalar(65, 200, 255);
+    //private final Scalar FINISH_LINE_MIN = new Scalar(45, 110, 150);
+    //private final Scalar FINISH_LINE_MAX = new Scalar(65, 200, 255);
+
+    private final Scalar FINISH_LINE_MIN = new Scalar(200, 150, 100);
+    private final Scalar FINISH_LINE_MAX = new Scalar(255, 255, 255);
 
     private Mat mImgDisplay;
     private Mat imgProcess;
-    private final double processHeight = 0;
+    private int finishFrame = -1;
 
+    private int framesWithoutInput = 0;
+    public double steeringOutput = 0;
+    public double throttleOutput = 0;
 
-    //TODO: Tune PID Controls
-    public double targetSteer = 0;
-    public double errIntegral = 0;
-    public double oldErr = 0;
-    public final double kI = 0.0;
-    public final double kP = 0.5;
-    public final double kD = 0.0;
-
-    final int lineCount = 5;
-    final int[] lineX = new int[lineCount];
-    int[] lineHeight = new int[lineCount];
-
+    private PidController pid = new PidController(0.5, 0, 0);
 
     BaseLoaderCallback mLoaderCallback;
 
@@ -120,9 +125,7 @@ public class PathFinder {
         List<MatOfPoint> newContours = new ArrayList<>();
         Imgproc.findContours(line, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         double currentDist = w;
-        int contourIdx = 0;
         double currentPos = w;
-        int bestContour = -1;
         for(MatOfPoint contour : newContours)
         {
             Point centroid = ColorContourContainer.GetCentroid(contour);
@@ -131,9 +134,7 @@ public class PathFinder {
             {
                 currentDist = diff;
                 currentPos = centroid.x;
-                bestContour = contourIdx;
             }
-            contourIdx++;
         }
 
         Imgproc.drawMarker(mImgDisplay,new Point(currentPos, y), COLOR_WHITE, Imgproc.MARKER_TRIANGLE_DOWN, 30, 3);
@@ -149,6 +150,7 @@ public class PathFinder {
 
         final double trackLocateStartX = imgWidthPx*0.5;
         final double trackLocateStartY = imgHeightPx*0.8;
+        final double finishY = imgHeightPx*0.8;
         final int centreLocateIncrement = -40; // this many pixels in Y direction per step
         final int centreLocateCount  = 10;
         final double centreLocateWeightStart = 0.5;
@@ -163,10 +165,6 @@ public class PathFinder {
         List<MatOfPoint> trackContours = detectorTrack
                 .Load(imgProcess)
                 .IncludeRange(TRACK_MIN, TRACK_MAX)
-                .GetContours();
-        List<MatOfPoint> finishContours = detectorFinishLine
-                .Load(imgProcess)
-                .IncludeRange(FINISH_LINE_MIN, FINISH_LINE_MAX)
                 .GetContours();
 
         //List <MatOfPoint> blackRegions = detectorBlack.Load(imgProcess).IncludeRange(BLACK_MAX, BLACK_MIN).GetContours();
@@ -214,13 +212,14 @@ public class PathFinder {
 
         //double currentErr = PxToNormal(trackMidPx, imgDisplay.cols());
 
-        //targetSteer = SteeringControl(currentErr);
+        // = SteeringControl(currentErr);
 
         //Draw Steering target marker
         //Point wheelAngleMarker = new Point( NormalToPx(targetSteer, imgDisplay.cols()), 12);
         //Point origin = new Point(trackMidPx, imgDisplay.rows());
         //Imgproc.line(imgDisplay, origin, wheelAngleMarker, COLOR_PURPLE, 2);
 
+        double steeringRequest = 0;
         // Display contours for debugging
         Point trackLocateStart = new Point(trackLocateStartX, trackLocateStartY);
         int contourNum = 0;
@@ -249,11 +248,36 @@ public class PathFinder {
                 xCentre += FindLine(imgProcess,mImgDisplay,detectorTrack,
                         prevCentre, trackLocateStartY+(i*centreLocateIncrement))*weight;
             }
-            xCentre /= centreLocateCount;
-            //xCentre /= imgWidthPx;
 
-            Imgproc.drawMarker(mImgDisplay, new Point(xCentre, imgHeightPx/2),
+            List<MatOfPoint> finishContours = detectorFinishLine
+                    .Load(imgProcess)
+                    .IncludeRange(FINISH_LINE_MIN, FINISH_LINE_MAX)
+                    .GetContours();
+            double curFinishY = 0;
+            double finishArea = 0;
+            for(MatOfPoint contour : finishContours)
+            {
+                double a = Imgproc.contourArea(contour);
+                if(a > finishArea)
+                {
+                    finishArea = a;
+                    curFinishY = ColorContourContainer.GetCentroid(contour).y;
+                }
+            }
+            if(curFinishY > finishY && finishFrame < 0)
+            {
+                finishFrame = 0;
+            }
+            Imgproc.drawContours(mImgDisplay, finishContours, -1,
+                    COLOR_GREEN, Imgproc.FILLED);
+
+
+            xCentre /= centreLocateCount;
+
+            Imgproc.drawMarker(mImgDisplay, new Point(xCentre, imgHeightPx/2.0),
                     COLOR_BLACK, Imgproc.MARKER_DIAMOND, 50, 10);
+
+            steeringRequest = (xCentre / (imgWidthPx/2.0))-1;
 
             List<MatOfPoint> arrowContours = detectorArrow
                     .Load(imgProcess)
@@ -262,7 +286,6 @@ public class PathFinder {
                     .GetContours();
             //Imgproc.drawContours(mImgDisplay, arrowContours, -1, COLOR_GREEN, Imgproc.FILLED);//*/
 
-            Imgproc.drawContours(mAlphaBuffer, finishContours, -1, COLOR_PURPLE, Imgproc.FILLED);
             /*List<MatOfPoint> blackContours = detectorBlack
                     .Load(imgProcess)
                     .IncludeRange(BLACK_MIN, BLACK_MAX)
@@ -302,41 +325,57 @@ public class PathFinder {
                 Imgproc.drawContours(mAlphaBuffer, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
 
             }//*/
+            if(finishFrame >= 0)
+            {
+                finishFrame++;
+                if(finishFrame > 10)
+                {
+                    finishStop = true;
+                    finishFrame--;
+                }
+            }
 
+            throttleOutput = finishStop ? 0 : 0.2;
+            steeringOutput = pid.Run(steeringRequest, 1.0/10);
+
+            safetyStop = false;
             // transparent overlay
             final float alpha = 0.3f;
             Core.addWeighted(mImgDisplay, 1 - alpha, mAlphaBuffer, alpha, 0, mImgDisplay);
+            framesWithoutInput = 0;
+
         }
+        else
+        {
+            framesWithoutInput++;
+            if(framesWithoutInput > 10)
+            {
+                throttleOutput = 0;
+                steeringOutput = 0;
+                safetyStop = true;
+                framesWithoutInput--;
+                finishFrame = -1;
+            }
+        }
+
 
         Imgproc.drawMarker(mImgDisplay, trackLocateStart, new Scalar(255, 0, 255), Imgproc.MARKER_STAR, 30, 2);
 
         //Draw output text
         Imgproc.rectangle(mImgDisplay,
-                new Rect(0, 0, 220, 40), COLOR_WHITE, -1);
+                new Rect(0, 0, 800, 40), COLOR_WHITE, -1);
         Imgproc.putText(mImgDisplay,
-                String.format("%3d", trackContours.size()),
+                String.format("S:%1.3f", steeringOutput),
                 new Point(10, 30), 0, 1, COLOR_BLACK, 2);
+        Imgproc.putText(mImgDisplay,
+                String.format("T:%1.3f", throttleOutput),
+                new Point(250, 30), 0, 1, COLOR_BLACK, 2);
+        Imgproc.putText(mImgDisplay,
+                String.format("F:%d", finishFrame),
+                new Point(550, 30), 0, 1, COLOR_BLACK, 2);
 
         mAlphaBuffer.release();
         return mImgDisplay;
-    }
-
-    public double SteeringControl(double error) {
-
-        //Placeholder estimate of time between image frames
-        //TODO: Implement an actual delta-time function
-        final double delta_time = 1.0/50;
-
-        double diffErr = (error - oldErr) / delta_time;
-        oldErr = error;
-        errIntegral = errIntegral + error * delta_time;
-
-        //Quick and dirty PID
-        targetSteer = (error * kP) + (errIntegral * kI) + (diffErr * kD);
-        //Cap output to +/- 1
-        if (targetSteer > 1) targetSteer = 1;
-        if (targetSteer < -1) targetSteer = -1;
-        return targetSteer;
     }
 
     public Mat GetColourValue(Mat rgbImage) {

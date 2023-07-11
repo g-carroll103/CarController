@@ -41,6 +41,7 @@ public class DriveControl {
 
     State appState = State.STARTUP;
 
+    public boolean autoStop = false;
     // servo control values - neutral (midpoint) and range from midpoint
     final int servoNeutral = 1000;
     final int steerScale = -300;
@@ -109,7 +110,7 @@ public class DriveControl {
 
         //CarMode carMode =
         CarMode carMode;
-        if (appState != State.CONNECTED)
+        if (appState != State.CONNECTED || (autonomousControl && autoStop))
             carMode = CarMode.CAR_MODE_STOPPED;
         else if (!autonomousControl)
             carMode = CarMode.CAR_MODE_MANUAL;

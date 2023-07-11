@@ -35,7 +35,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     TimerTask tt = TimerRoutine();
     Timer tmr;
     boolean colorChecking = false;
-    static final float standardThrottle = 0.27f;
 
     // UI Function definitions:
     @Override
@@ -239,6 +238,8 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         } else {
             //Run Pathfinder function, display annotated image
             rgbImage = pf.FindPath(rgbImage);
+            if(dc != null)
+                dc.SetControlsA((float)pf.throttleOutput, (float)pf.steeringOutput);
         }
         Core.rotate(rgbImage, rgbImage, Core.ROTATE_90_COUNTERCLOCKWISE);
         //Show the annotated image
