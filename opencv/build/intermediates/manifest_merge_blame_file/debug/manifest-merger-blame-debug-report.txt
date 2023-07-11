@@ -3,6 +3,6 @@
 3    package="org.opencv" >
 4
 5    <uses-sdk android:minSdkVersion="30" />
-5-->C:\Users\jcnic\Android\CarController\opencv\java\AndroidManifest.xml
+5-->C:\Users\Guy\AndroidStudioProjects\CarController\opencv\java\AndroidManifest.xml
 6
 7</manifest>

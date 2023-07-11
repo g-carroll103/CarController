@@ -19,13 +19,6 @@ public class DriveControl {
     UsbSerialPort port;
     TextView outText;
 
-    enum State {
-        STARTUP,
-        CONNECTED,
-        ERR,
-        NO_UART
-    }
-
     enum LedMode {
         LED_MODE_OFF,
         LED_MODE_AUTO,
@@ -37,18 +30,18 @@ public class DriveControl {
         CAR_MODE_STOPPED,
         CAR_MODE_STOPPED_TIMEOUT,
         CAR_MODE_MANUAL,
-        CAR_MODE_AUTO
+        CAR_MODE_AUTO,
+        CAR_MODE_NO_USB
     }
 
-    State appState = State.STARTUP;
 
     public boolean autoStop = false;
     // servo control values - neutral (midpoint) and range from midpoint
-    final int servoNeutral = 1000;
-    final int steerScale = -300;
-    final int throttleScale = 0;
+    final int servoNeutral = 1500;
+    final int steerScale = -400;
+    final int throttleScale = 100;
     // autonomous or manual?
-    boolean autonomousControl = true;
+    boolean autonomousControl = false;
     // LED strip controls
     boolean enableLedStrip = true;
     // audio pulse for LEDs
@@ -109,14 +102,18 @@ public class DriveControl {
             steerServoValue += (int) (steerScale * steerM);
         }
 
-        //CarMode carMode =
         CarMode carMode;
-        if (appState != State.CONNECTED)// || (autonomousControl && autoStop))
-            carMode = CarMode.CAR_MODE_STOPPED;
-        else if (!autonomousControl)
-            carMode = CarMode.CAR_MODE_MANUAL;
-        else
+
+        if (null == port )
+            carMode = CarMode.CAR_MODE_NO_USB;
+        else if (!port.isOpen())
+            carMode = CarMode.CAR_MODE_NO_USB;
+        else if (autonomousControl)
             carMode = CarMode.CAR_MODE_AUTO;
+        else
+            carMode = CarMode.CAR_MODE_MANUAL;
+
+        Log.e("carMode State:", carMode.toString());
 
         LedMode ledMode;
         if (!enableLedStrip)
@@ -129,8 +126,9 @@ public class DriveControl {
             ledMode = LedMode.LED_MODE_AUTO;
 
         // convert to format controller expects
+        // TODO: Swapped servo outputs to correct servo wiring
         return String.format("T%04d S%04d M%1d L%1d P%03d\n",
-                throttleServoValue, steerServoValue,
+                steerServoValue, throttleServoValue,
                 carMode.ordinal(), ledMode.ordinal(), audioPulseStrength);
     }
 
@@ -144,19 +142,6 @@ public class DriveControl {
         }
     }
 
-    public void SetAppState(State state) {
-        //Update the app state and background colour
-        appState = state;
-        switch (appState) {
-            case STARTUP -> {
-                outText.setBackgroundColor(0x7F7F7F);
-            }
-            case CONNECTED -> {
-                outText.setBackgroundColor(0xFF0000);
-            }
-            default -> {}
-        }
-    }
     public String dbg = "";
 
     public boolean InitPort(UsbManager manager) {
@@ -216,7 +201,11 @@ public class DriveControl {
             port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
             String tmp = "M2 ";
             port.write(tmp.getBytes(StandardCharsets.UTF_8), 1000);
-        }catch(Exception e){}
+        }catch(Exception e){
+            Log.e("SerialPort", "Serial Exception: ");
+            Log.e("SerialPort", e.getMessage());
+
+        }
         return true;
     }
 
@@ -224,7 +213,6 @@ public class DriveControl {
         //Cleans up and closes the serial port output
         if (port != null) {
             try {
-                SetAppState(State.STARTUP);
                 autonomousControl = false;
                 SetControlsM(0, 0);
                 WriteDriveCommand();
