@@ -67,7 +67,7 @@ public class PathFinder {
     public double steeringOutput = 0;
     public double throttleOutput = 0;
 
-    private PidController pid = new PidController(0.5, 0, 0);
+    private PidController pid = new PidController(1, 0, 0);
 
     BaseLoaderCallback mLoaderCallback;
 
@@ -355,6 +355,7 @@ public class PathFinder {
                 safetyStop = true;
                 framesWithoutInput--;
                 finishFrame = -1;
+                finishStop = false;
             }
         }
 
