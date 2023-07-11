@@ -250,9 +250,9 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         return new TimerTask() {
             @Override
             public void run() {
+                infoBox.setText(String.format("%s %s", dc.GetDriveCommand(), dc.dbg));
                 // Write current command to serial port
                 dc.WriteDriveCommand();
-                infoBox.setText(dc.GetDriveCommand());
             }//end run
         }; //end new timertask
     } //end timerroutine

@@ -6,9 +6,9 @@
     "deprecated": false,
     "default": true
   },
-  "cxxBuildFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\.cxx\\Debug\\5n5i4g6b\\x86",
-  "soFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b\\obj\\x86",
-  "soRepublishFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build\\intermediates\\cmake\\debug\\obj\\x86",
+  "cxxBuildFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\.cxx\\Debug\\5n5i4g6b\\x86",
+  "soFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b\\obj\\x86",
+  "soRepublishFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\build\\intermediates\\cmake\\debug\\obj\\x86",
   "abiPlatformVersion": 30,
   "cmake": {
     "effectiveConfiguration": {
@@ -36,15 +36,15 @@
     "implicitBuildTargetSet": [],
     "cmakeSettingsConfiguration": "android-gradle-plugin-predetermined-name",
     "module": {
-      "cxxFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\.cxx",
-      "intermediatesBaseFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build\\intermediates",
-      "intermediatesFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build\\intermediates\\cxx",
+      "cxxFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\.cxx",
+      "intermediatesBaseFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\build\\intermediates",
+      "intermediatesFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\build\\intermediates\\cxx",
       "gradleModulePathName": ":opencv",
-      "moduleRootFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv",
-      "moduleBuildFile": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build.gradle",
-      "makeFile": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\libcxx_helper\\CMakeLists.txt",
+      "moduleRootFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv",
+      "moduleBuildFile": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\build.gradle",
+      "makeFile": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\libcxx_helper\\CMakeLists.txt",
       "buildSystem": "CMAKE",
-      "ndkFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653",
+      "ndkFolder": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653",
       "ndkVersion": "25.2.9519653",
       "ndkSupportedAbiList": [
         "ARMEABI_V7A",
@@ -62,7 +62,27 @@
       "ndkMetaPlatforms": {
         "min": 19,
         "max": 33,
-        "aliases": {}
+        "aliases": {
+          "20": 19,
+          "25": 24,
+          "J": 16,
+          "J-MR1": 17,
+          "J-MR2": 18,
+          "K": 19,
+          "L": 21,
+          "L-MR1": 22,
+          "M": 23,
+          "N": 24,
+          "N-MR1": 24,
+          "O": 26,
+          "O-MR1": 27,
+          "P": 28,
+          "Q": 29,
+          "R": 30,
+          "S": 31,
+          "Sv2": 32,
+          "Tiramisu": 33
+        }
       },
       "ndkMetaAbiList": [
         {
@@ -90,30 +110,30 @@
           "default": true
         }
       ],
-      "cmakeToolchainFile": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653\\build\\cmake\\android.toolchain.cmake",
+      "cmakeToolchainFile": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653\\build\\cmake\\android.toolchain.cmake",
       "cmake": {
-        "cmakeExe": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\cmake\\3.22.1\\bin\\cmake.exe"
+        "cmakeExe": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\cmake.exe"
       },
       "stlSharedObjectMap": {
         "LIBCXX_SHARED": {
-          "ARMEABI_V7A": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\arm-linux-androideabi\\libc++_shared.so",
-          "ARM64_V8A": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\aarch64-linux-android\\libc++_shared.so",
-          "X86": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\i686-linux-android\\libc++_shared.so",
-          "X86_64": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\x86_64-linux-android\\libc++_shared.so"
+          "ARMEABI_V7A": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\arm-linux-androideabi\\libc++_shared.so",
+          "ARM64_V8A": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\aarch64-linux-android\\libc++_shared.so",
+          "X86": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\i686-linux-android\\libc++_shared.so",
+          "X86_64": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\x86_64-linux-android\\libc++_shared.so"
         },
         "LIBCXX_STATIC": {},
         "NONE": {},
         "SYSTEM": {}
       },
       "project": {
-        "rootBuildGradleFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController",
-        "sdkFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK",
+        "rootBuildGradleFolder": "C:\\Users\\jcnic\\Android\\CarController",
+        "sdkFolder": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk",
         "isBuildOnlyTargetAbiEnabled": true,
         "isCmakeBuildCohabitationEnabled": false,
         "isPrefabEnabled": false
       },
       "outputOptions": [],
-      "ninjaExe": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\cmake\\3.22.1\\bin\\ninja.exe",
+      "ninjaExe": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
       "hasBuildTimeInformation": true
     },
     "prefabClassPaths": [],
@@ -125,29 +145,29 @@
   "buildSettings": {
     "environmentVariables": []
   },
-  "prefabFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\.cxx\\Debug\\5n5i4g6b\\prefab\\x86",
+  "prefabFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\.cxx\\Debug\\5n5i4g6b\\prefab\\x86",
   "isActiveAbi": true,
   "fullConfigurationHash": "5n5i4g6b4q1f2h4x6b6e1aen6d1v522pl2l2p1x36381qh32512d2d21uo",
   "fullConfigurationHashKey": "# Values used to calculate the hash in this folder name.\n# Should not depend on the absolute path of the project itself.\n#   - AGP: 8.0.2.\n#   - $NDK is the path to NDK 25.2.9519653.\n#   - $PROJECT is the path to the parent folder of the root Gradle build file.\n#   - $ABI is the ABI to be built with. The specific value doesn\u0027t contribute to the value of the hash.\n#   - $HASH is the hash value computed from this text.\n#   - $CMAKE is the path to CMake 3.22.1.\n#   - $NINJA is the path to Ninja.\n-H$PROJECT/opencv/libcxx_helper\n-DCMAKE_SYSTEM_NAME\u003dAndroid\n-DCMAKE_EXPORT_COMPILE_COMMANDS\u003dON\n-DCMAKE_SYSTEM_VERSION\u003d30\n-DANDROID_PLATFORM\u003dandroid-30\n-DANDROID_ABI\u003d$ABI\n-DCMAKE_ANDROID_ARCH_ABI\u003d$ABI\n-DANDROID_NDK\u003d$NDK\n-DCMAKE_ANDROID_NDK\u003d$NDK\n-DCMAKE_TOOLCHAIN_FILE\u003d$NDK/build/cmake/android.toolchain.cmake\n-DCMAKE_MAKE_PROGRAM\u003d$NINJA\n-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003d$PROJECT/opencv/build/intermediates/cxx/Debug/$HASH/obj/$ABI\n-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003d$PROJECT/opencv/build/intermediates/cxx/Debug/$HASH/obj/$ABI\n-DCMAKE_BUILD_TYPE\u003dDebug\n-B$PROJECT/opencv/.cxx/Debug/$HASH/$ABI\n-GNinja\n-DANDROID_STL\u003dc++_shared",
   "configurationArguments": [
-    "-HC:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\libcxx_helper",
+    "-HC:\\Users\\jcnic\\Android\\CarController\\opencv\\libcxx_helper",
     "-DCMAKE_SYSTEM_NAME\u003dAndroid",
     "-DCMAKE_EXPORT_COMPILE_COMMANDS\u003dON",
     "-DCMAKE_SYSTEM_VERSION\u003d30",
     "-DANDROID_PLATFORM\u003dandroid-30",
     "-DANDROID_ABI\u003dx86",
     "-DCMAKE_ANDROID_ARCH_ABI\u003dx86",
-    "-DANDROID_NDK\u003dC:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653",
-    "-DCMAKE_ANDROID_NDK\u003dC:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653",
-    "-DCMAKE_TOOLCHAIN_FILE\u003dC:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653\\build\\cmake\\android.toolchain.cmake",
-    "-DCMAKE_MAKE_PROGRAM\u003dC:\\Users\\Guy\\AndroidStudioProjects\\SDK\\cmake\\3.22.1\\bin\\ninja.exe",
-    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003dC:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b\\obj\\x86",
-    "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003dC:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b\\obj\\x86",
+    "-DANDROID_NDK\u003dC:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653",
+    "-DCMAKE_ANDROID_NDK\u003dC:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653",
+    "-DCMAKE_TOOLCHAIN_FILE\u003dC:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653\\build\\cmake\\android.toolchain.cmake",
+    "-DCMAKE_MAKE_PROGRAM\u003dC:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003dC:\\Users\\jcnic\\Android\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b\\obj\\x86",
+    "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003dC:\\Users\\jcnic\\Android\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b\\obj\\x86",
     "-DCMAKE_BUILD_TYPE\u003dDebug",
-    "-BC:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\.cxx\\Debug\\5n5i4g6b\\x86",
+    "-BC:\\Users\\jcnic\\Android\\CarController\\opencv\\.cxx\\Debug\\5n5i4g6b\\x86",
     "-GNinja",
     "-DANDROID_STL\u003dc++_shared"
   ],
-  "stlLibraryFile": "C:\\Users\\Guy\\AndroidStudioProjects\\SDK\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\i686-linux-android\\libc++_shared.so",
-  "intermediatesParentFolder": "C:\\Users\\Guy\\AndroidStudioProjects\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b"
+  "stlLibraryFile": "C:\\Users\\jcnic\\AppData\\Local\\Android\\Sdk\\ndk\\25.2.9519653\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\i686-linux-android\\libc++_shared.so",
+  "intermediatesParentFolder": "C:\\Users\\jcnic\\Android\\CarController\\opencv\\build\\intermediates\\cxx\\Debug\\5n5i4g6b"
 }

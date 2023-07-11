@@ -3,6 +3,7 @@ package com.qutas.carcontroller;
 import android.annotation.SuppressLint;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.os.SystemClock;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -45,9 +46,9 @@ public class DriveControl {
     // servo control values - neutral (midpoint) and range from midpoint
     final int servoNeutral = 1000;
     final int steerScale = -300;
-    final int throttleScale = 200;
+    final int throttleScale = 0;
     // autonomous or manual?
-    boolean autonomousControl = false;
+    boolean autonomousControl = true;
     // LED strip controls
     boolean enableLedStrip = true;
     // audio pulse for LEDs
@@ -139,6 +140,7 @@ public class DriveControl {
             //Prints the command with a timeout of 100ms:
             port.write(GetDriveCommand().getBytes(StandardCharsets.UTF_8), 100);
         } catch (Exception ignore) {
+            outText.setText("ERR");
         }
     }
 
@@ -155,10 +157,11 @@ public class DriveControl {
             default -> {}
         }
     }
+    public String dbg = "";
 
     public boolean InitPort(UsbManager manager) {
 
-        // Find all available drivers from attached devices.
+        /*// Find all available drivers from attached devices.
         List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
         if (availableDrivers.isEmpty()) {
             SetAppState(State.NO_UART);
@@ -189,8 +192,31 @@ public class DriveControl {
             Log.w("Err initialising port: ", e.toString());
             return false;
         }
+        dbg = String.format("%d:%d", availableDrivers.size(), driver.getPorts().size());
         //If no errors occurred, return a success message
         SetAppState(State.CONNECTED);
+        return true;//*/
+        List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
+        if (availableDrivers.isEmpty()) {
+            return false;
+        }
+
+        // Open a connection to the first available driver.
+        UsbSerialDriver driver = availableDrivers.get(0);
+        UsbDeviceConnection connection = manager.openDevice(driver.getDevice());
+        if (connection == null) {
+            dbg = "NULL";
+            return false;
+        }
+
+        port = driver.getPorts().get(0); // Most devices have just one port (port 0)
+        try {
+            SystemClock.sleep(500);
+            port.open(connection);
+            port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+            String tmp = "M2 ";
+            port.write(tmp.getBytes(StandardCharsets.UTF_8), 1000);
+        }catch(Exception e){}
         return true;
     }
 

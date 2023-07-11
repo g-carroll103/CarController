@@ -12,8 +12,8 @@
 
     <TextView
         android:id="@+id/textOutput"
-        android:layout_width="383dp"
-        android:layout_height="49dp"
+        android:layout_width="388dp"
+        android:layout_height="67dp"
         android:background="@android:color/holo_red_light"
         android:gravity="fill_horizontal|top|start"
         android:outlineAmbientShadowColor="@color/white"
