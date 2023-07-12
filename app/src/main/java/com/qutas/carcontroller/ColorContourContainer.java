@@ -21,7 +21,7 @@ public class ColorContourContainer {
     // Minimum contour area in percent for contours filtering
     static double minContourArea = 0;
     int erodeKernelSize = 5;
-    int dilateKernelSize = 3;
+    int dilateKernelSize = 5;
 
 
     private List<MatOfPoint> mContours = new ArrayList<>();

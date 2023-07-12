@@ -47,17 +47,17 @@ public class PathFinder {
 
 
     // HSV min/max limits
-    private final Scalar TRACK_MIN = new Scalar(0, 0, 100);
-    private final Scalar TRACK_MAX = new Scalar(255, 40, 255);
+    private final Scalar TRACK_MIN = new Scalar(0, 0, 0);
+    private final Scalar TRACK_MAX = new Scalar(255, 60, 255);
 
     private final Scalar ARROW_MIN = new Scalar(0, 0, 0);
     private final Scalar ARROW_MAX = new Scalar(255, 50, 70);
 
-    //private final Scalar FINISH_LINE_MIN = new Scalar(45, 110, 150);
-    //private final Scalar FINISH_LINE_MAX = new Scalar(65, 200, 255);
+    private final Scalar FINISH_LINE_MIN = new Scalar(45, 110, 150);
+    private final Scalar FINISH_LINE_MAX = new Scalar(65, 200, 255);
 
-    private final Scalar FINISH_LINE_MIN = new Scalar(200, 150, 100);
-    private final Scalar FINISH_LINE_MAX = new Scalar(255, 255, 255);
+    //private final Scalar FINISH_LINE_MIN = new Scalar(200, 150, 100);
+    //private final Scalar FINISH_LINE_MAX = new Scalar(255, 255, 255);
 
     private Mat mImgDisplay;
     private Mat imgProcess;
@@ -124,18 +124,22 @@ public class PathFinder {
 
         List<MatOfPoint> newContours = new ArrayList<>();
         Imgproc.findContours(line, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-        double currentDist = w;
-        double currentPos = w;
+        double currentDist = 10000;
+        double currentPos = centre;
         for(MatOfPoint contour : newContours)
         {
             Point centroid = ColorContourContainer.GetCentroid(contour);
             double diff = Math.abs(centroid.x - centre);
+            Imgproc.drawMarker(mImgDisplay,new Point(centroid.x, y), COLOR_GREEN, Imgproc.MARKER_TRIANGLE_DOWN, 30, 3);
+            Imgproc.putText(mImgDisplay, String.format("%.2f", diff),
+                    new Point(centroid.x, y), Imgproc.FONT_HERSHEY_COMPLEX_SMALL, 2, COLOR_BLACK);
             if(diff < currentDist)
             {
                 currentDist = diff;
                 currentPos = centroid.x;
             }
         }
+
 
         Imgproc.drawMarker(mImgDisplay,new Point(currentPos, y), COLOR_WHITE, Imgproc.MARKER_TRIANGLE_DOWN, 30, 3);
         return (int) currentPos;
@@ -149,12 +153,19 @@ public class PathFinder {
         final int imgHeightPx = image.rows();
 
         final double trackLocateStartX = imgWidthPx*0.5;
-        final double trackLocateStartY = imgHeightPx*0.8;
+        final double trackLocateStartY = imgHeightPx*0.9;
         final double finishY = imgHeightPx*0.8;
         final int centreLocateIncrement = -40; // this many pixels in Y direction per step
-        final int centreLocateCount  = 10;
-        final double centreLocateWeightStart = 0.5;
-        final double centreLocateWeightEnd = 2-centreLocateWeightStart;
+        final int centreLocateCount  = 15;
+//        final int centreLocateIncrement = -80; // this many pixels in Y direction per step
+//        final int centreLocateCount  = 2;
+        final double centreLocateWeightStart = 1;
+        final double centreLocateWeightEnd = 2;
+        final double overrideY = imgHeightPx*0.95;
+        final double overrideThresh = imgWidthPx*0.4/2;
+        final double cutoffThresh = imgWidthPx*0.5/2;
+        final double slowSpeed = 1;
+        final double slowSpeedThresh = 0.5;
 
         imgProcess = mImgDisplay.clone();
         //Blur image to denoise
@@ -219,8 +230,9 @@ public class PathFinder {
         //Point origin = new Point(trackMidPx, imgDisplay.rows());
         //Imgproc.line(imgDisplay, origin, wheelAngleMarker, COLOR_PURPLE, 2);
 
-        double steeringRequest = 0;
         // Display contours for debugging
+
+        double steeringRequest = 0;
         Point trackLocateStart = new Point(trackLocateStartX, trackLocateStartY);
         int contourNum = 0;
         boolean trackContourFound = false;
@@ -228,7 +240,6 @@ public class PathFinder {
             if(Imgproc.pointPolygonTest(new MatOfPoint2f(contour.toArray()), trackLocateStart, false) > 0)
             {
                 trackContourFound = true;
-                //Imgproc.drawContours(mAlphaBuffer, trackContours, contourNum, COLOR_GREEN, Imgproc.FILLED);
                 break;
             }
             contourNum++;
@@ -245,8 +256,15 @@ public class PathFinder {
             {
                 double lerp = (double)i/(centreLocateCount-1);
                 double weight = (centreLocateWeightStart*(1-lerp))+(centreLocateWeightEnd*lerp);
-                xCentre += FindLine(imgProcess,mImgDisplay,detectorTrack,
-                        prevCentre, trackLocateStartY+(i*centreLocateIncrement))*weight;
+                double xo = FindLine(imgProcess,mImgDisplay,detectorTrack,
+                        prevCentre, trackLocateStartY+(i*centreLocateIncrement));
+                prevCentre = xo;
+                xCentre += (xo-(trackLocateStartX))*weight;;
+                if(Math.abs(xo-(trackLocateStartX)) > cutoffThresh)
+                {
+                    xCentre += (centreLocateCount - i - 1)*(xo-(trackLocateStartX))*centreLocateWeightEnd;
+                    break;
+                }
             }
 
             List<MatOfPoint> finishContours = detectorFinishLine
@@ -274,10 +292,19 @@ public class PathFinder {
 
             xCentre /= centreLocateCount;
 
-            Imgproc.drawMarker(mImgDisplay, new Point(xCentre, imgHeightPx/2.0),
+            double possibleOverride = FindLine(imgProcess,mImgDisplay,detectorTrack,
+                    imgWidthPx/2.0, overrideY)-(trackLocateStartX);
+            if(Math.abs(possibleOverride) > overrideThresh)
+                xCentre = possibleOverride;
+
+            Imgproc.drawMarker(mImgDisplay, new Point(xCentre+trackLocateStartX, imgHeightPx/2.0),
                     COLOR_BLACK, Imgproc.MARKER_DIAMOND, 50, 10);
 
-            steeringRequest = (xCentre / (imgWidthPx/2.0))-1;
+            steeringRequest = (xCentre / (imgWidthPx/2.0));
+            if(steeringRequest > 1)
+                steeringRequest = 1;
+            if(steeringRequest < -1)
+                steeringRequest = -1;
 
             List<MatOfPoint> arrowContours = detectorArrow
                     .Load(imgProcess)
@@ -335,7 +362,10 @@ public class PathFinder {
                 }
             }
 
-            throttleOutput = finishStop ? 0 : 1;
+            double tmpThr = 1;
+            if(Math.abs(steeringRequest) > slowSpeedThresh)
+                tmpThr = slowSpeed;
+            throttleOutput = finishStop ? 0 : tmpThr;
             steeringOutput = pid.Run(steeringRequest, 1.0/10);
 
             safetyStop = false;

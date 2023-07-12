@@ -38,7 +38,7 @@ public class DriveControl {
     public boolean autoStop = false;
     // servo control values - neutral (midpoint) and range from midpoint
     final int servoNeutral = 1500;
-    final int steerScale = -400;
+    final int steerScale = 500;
     final int throttleScale = 100;
     // autonomous or manual?
     boolean autonomousControl = false;
