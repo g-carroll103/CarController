@@ -164,15 +164,16 @@ public class PathFinder {
 //        final int centreLocateIncrement = -80; // this many pixels in Y direction per step
 //        final int centreLocateCount  = 2;
         final double centreLocateMul = 1;
-        final double centreLocateWeightStart = 2;
-        final double centreLocateWeightEnd = 1;
+        final double centreLocateWeightStart = 5;
+        final double centreLocateWeightEnd = 2.5;
         final double centreLocateStartY = imgHeightPx*0.85;
-        final double overrideY = imgHeightPx*0.855;
-        final double overrideThresh = imgWidthPx*0.4/2;
-        final double cutoffThresh = 200;
+        final double overrideY = imgHeightPx*0.82;
+        final double overrideThresh = imgWidthPx*0.3/2;
+        final double edgeAdd = 200;
         final double overrideMul = 1.5;
         final double slowSpeed = 1;
-        final double slowSpeedThresh = 0.5;
+        final double fastSpeed = 1.3;
+        final double slowSpeedThresh = 0.3;
 
         imgProcess = mImgDisplay.clone();
         //Blur image to denoise
@@ -272,15 +273,16 @@ public class PathFinder {
                 {
                     isInvalid = true;
                     if(prevCentre < trackLocateStartX)
-                        xReal = 0;
+                        xReal = 0-edgeAdd;
                     else
-                        xReal = imgWidthPx;
+                        xReal = imgWidthPx+edgeAdd;
                     Imgproc.drawMarker(mImgDisplay, new Point(xReal, y), COLOR_RED, Imgproc.MARKER_TILTED_CROSS, 40, 5);
 
                     //prevCentre = xReal;
                     xCentre += (centreLocateCount - i - 1) * (xReal - trackLocateStartX) * centreLocateWeightEnd;
                     break;
                 }//*/
+
 
                 double xCentred = xReal - (trackLocateStartX);
                 /*if(isInvalid)
@@ -293,7 +295,7 @@ public class PathFinder {
                 xCentre += xCentred*weight;
                 prevCentre = xReal;
             }
-            //xCentre *= centreLocateMul;
+            xCentre *= centreLocateMul;
 
             List<MatOfPoint> finishContours = detectorFinishLine
                     .Load(imgProcess)
@@ -348,14 +350,14 @@ public class PathFinder {
             if(finishFrame >= 0)
             {
                 finishFrame++;
-                if(finishFrame > 10)
+                if(finishFrame > 0)
                 {
                     finishStop = true;
                     finishFrame--;
                 }
             }
 
-            double tmpThr = 1;
+            double tmpThr = fastSpeed;
             if(Math.abs(steeringRequest) > slowSpeedThresh)
                 tmpThr = slowSpeed;
             throttleOutput = finishStop ? 0 : tmpThr;
