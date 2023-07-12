@@ -160,23 +160,23 @@ public class PathFinder {
         final double trackLocateStartY = imgHeightPx*0.95;
         final double finishY = imgHeightPx*0.8;
         final int centreLocateIncrement = -40; // this many pixels in Y direction per step
-        final int centreLocateCount  = 15;
+        final int centreLocateCount  = 9;
 //        final int centreLocateIncrement = -80; // this many pixels in Y direction per step
 //        final int centreLocateCount  = 2;
         final double centreLocateMul = 1;
         final double centreLocateWeightStart = 2;
-        final double centreLocateWeightEnd = 2;
+        final double centreLocateWeightEnd = 1;
         final double centreLocateStartY = imgHeightPx*0.85;
         final double overrideY = imgHeightPx*0.855;
         final double overrideThresh = imgWidthPx*0.4/2;
         final double cutoffThresh = 200;
-        final double overrideMul = 2;
+        final double overrideMul = 1.5;
         final double slowSpeed = 1;
         final double slowSpeedThresh = 0.5;
 
         imgProcess = mImgDisplay.clone();
         //Blur image to denoise
-        Imgproc.blur(imgProcess, imgProcess, new Size(7,7));
+        //Imgproc.blur(imgProcess, imgProcess, new Size(7,7));
 
 
         //Get contour of open road, not including any coloured regions
@@ -371,7 +371,7 @@ public class PathFinder {
         else
         {
             framesWithoutInput++;
-            if(framesWithoutInput > 3)
+            if(framesWithoutInput > 10)
             {
                 throttleOutput = 0;
                 steeringOutput = 0;

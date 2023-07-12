@@ -35,7 +35,7 @@ public class ColorContourContainer {
     int selectedContour = -1;
 
     public ColorContourContainer(){
-        this(5, 3);
+        this(7, 0);
     }
     public ColorContourContainer(int erodeKernelSize, int dilateKernelSize) {
         this.erodeKernelSize = erodeKernelSize;
