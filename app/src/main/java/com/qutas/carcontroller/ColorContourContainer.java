@@ -20,8 +20,8 @@ public class ColorContourContainer {
 
     // Minimum contour area in percent for contours filtering
     static double minContourArea = 0;
-    int erodeKernelSize = 5;
-    int dilateKernelSize = 5;
+    int erodeKernelSize;
+    int dilateKernelSize;
 
 
     private List<MatOfPoint> mContours = new ArrayList<>();
@@ -35,7 +35,7 @@ public class ColorContourContainer {
     int selectedContour = -1;
 
     public ColorContourContainer(){
-        this(3, 5);
+        this(5, 3);
     }
     public ColorContourContainer(int erodeKernelSize, int dilateKernelSize) {
         this.erodeKernelSize = erodeKernelSize;
@@ -107,7 +107,7 @@ public class ColorContourContainer {
     }
     public ColorContourContainer SelectContour(int contour, boolean fillHoles)
     {
-        if(contour > 0 && contour < mContours.size()) {
+        if(contour >= 0 && contour < mContours.size()) {
             selectedContour = contour;
             mFilteredMask.setTo(Scalar.all(0));
             Imgproc.fillPoly(mFilteredMask, Collections.singletonList(mContours.get(selectedContour)),
@@ -130,8 +130,8 @@ public class ColorContourContainer {
     }
 
     public List<MatOfPoint> GetContours() {
-        Imgproc.dilate(mRawMask, mFilteredMask, GetDilationKernel());
         Imgproc.erode(mRawMask, mFilteredMask, GetErosionKernel());
+        Imgproc.dilate(mRawMask, mFilteredMask, GetDilationKernel());
         // Find blobs from the binary mask, store in contours list
         List<MatOfPoint> newContours = new ArrayList<>();
         Imgproc.findContours(mFilteredMask, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);

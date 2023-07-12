@@ -42,8 +42,8 @@ public class PathFinder {
     public ColorContourContainer detectorTrackHoles;
     public ColorContourContainer detectorArrow;
     public ColorContourContainer detectorFinishLine;
-    boolean safetyStop = true;
-    boolean finishStop = false;
+    public boolean safetyStop = true;
+    public boolean finishStop = false;
 
 
     // HSV min/max limits
@@ -61,7 +61,7 @@ public class PathFinder {
 
     private Mat mImgDisplay;
     private Mat imgProcess;
-    private int finishFrame = -1;
+    public int finishFrame = -1;
 
     private int framesWithoutInput = 0;
     public double steeringOutput = 0;
@@ -112,6 +112,7 @@ public class PathFinder {
 
     }//End constructor
 
+    public int invalid = 10000;
     public int FindLine(Mat imgProcess, Mat mImgDisplay, ColorContourContainer detector, double centre, double y)
     {
         int yPx = (int)y;
@@ -120,11 +121,10 @@ public class PathFinder {
         //int h = imgProcess.rows();
 
         Mat line = detector.mFilteredMask.submat(yPx, yPx+5, 0, w);
-        Imgproc.line(mImgDisplay, new Point(0, y), new Point(w, y), COLOR_CYAN, 5);
 
         List<MatOfPoint> newContours = new ArrayList<>();
         Imgproc.findContours(line, newContours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-        double currentDist = 10000;
+        double currentDist = invalid;
         double currentPos = centre;
         for(MatOfPoint contour : newContours)
         {
@@ -140,6 +140,10 @@ public class PathFinder {
             }
         }
 
+        if(currentDist == invalid)
+            return invalid;
+        Imgproc.line(mImgDisplay, new Point(0, y), new Point(w, y), COLOR_CYAN, 5);
+
 
         Imgproc.drawMarker(mImgDisplay,new Point(currentPos, y), COLOR_WHITE, Imgproc.MARKER_TRIANGLE_DOWN, 30, 3);
         return (int) currentPos;
@@ -153,17 +157,20 @@ public class PathFinder {
         final int imgHeightPx = image.rows();
 
         final double trackLocateStartX = imgWidthPx*0.5;
-        final double trackLocateStartY = imgHeightPx*0.9;
+        final double trackLocateStartY = imgHeightPx*0.95;
         final double finishY = imgHeightPx*0.8;
         final int centreLocateIncrement = -40; // this many pixels in Y direction per step
         final int centreLocateCount  = 15;
 //        final int centreLocateIncrement = -80; // this many pixels in Y direction per step
 //        final int centreLocateCount  = 2;
-        final double centreLocateWeightStart = 1;
+        final double centreLocateMul = 1;
+        final double centreLocateWeightStart = 2;
         final double centreLocateWeightEnd = 2;
-        final double overrideY = imgHeightPx*0.95;
+        final double centreLocateStartY = imgHeightPx*0.85;
+        final double overrideY = imgHeightPx*0.855;
         final double overrideThresh = imgWidthPx*0.4/2;
-        final double cutoffThresh = imgWidthPx*0.5/2;
+        final double cutoffThresh = 200;
+        final double overrideMul = 2;
         final double slowSpeed = 1;
         final double slowSpeedThresh = 0.5;
 
@@ -251,21 +258,42 @@ public class PathFinder {
             final MatOfPoint trackContour = trackContours.get(contourNum);
             final MatOfPoint2f trackContour2f = new MatOfPoint2f(trackContour.toArray());
             double xCentre = 0;
-            double prevCentre = imgWidthPx/2f;
+            double prevCentre = trackLocateStartX;
             for(int i = 0; i < centreLocateCount; i++)
             {
-                double lerp = (double)i/(centreLocateCount-1);
+                double lerp = i/(centreLocateCount-1f);
+                double y = centreLocateStartY+(i*centreLocateIncrement);
                 double weight = (centreLocateWeightStart*(1-lerp))+(centreLocateWeightEnd*lerp);
-                double xo = FindLine(imgProcess,mImgDisplay,detectorTrack,
-                        prevCentre, trackLocateStartY+(i*centreLocateIncrement));
-                prevCentre = xo;
-                xCentre += (xo-(trackLocateStartX))*weight;;
-                if(Math.abs(xo-(trackLocateStartX)) > cutoffThresh)
+                double xReal = FindLine(imgProcess,mImgDisplay,detectorTrack,
+                        prevCentre, y);
+
+                boolean isInvalid = false;
+                if(xReal >= invalid)/// || (Math.abs(xReal-prevCentre) > cutoffThresh && i>0 )) {
                 {
-                    xCentre += (centreLocateCount - i - 1)*(xo-(trackLocateStartX))*centreLocateWeightEnd;
+                    isInvalid = true;
+                    if(prevCentre < trackLocateStartX)
+                        xReal = 0;
+                    else
+                        xReal = imgWidthPx;
+                    Imgproc.drawMarker(mImgDisplay, new Point(xReal, y), COLOR_RED, Imgproc.MARKER_TILTED_CROSS, 40, 5);
+
+                    //prevCentre = xReal;
+                    xCentre += (centreLocateCount - i - 1) * (xReal - trackLocateStartX) * centreLocateWeightEnd;
                     break;
-                }
+                }//*/
+
+                double xCentred = xReal - (trackLocateStartX);
+                /*if(isInvalid)
+                {
+                    xCentre += (centreLocateCount - i - 1)*(xCentred-trackLocateStartX)*centreLocateWeightEnd;
+                    break;
+                }//*/
+
+
+                xCentre += xCentred*weight;
+                prevCentre = xReal;
             }
+            //xCentre *= centreLocateMul;
 
             List<MatOfPoint> finishContours = detectorFinishLine
                     .Load(imgProcess)
@@ -295,9 +323,14 @@ public class PathFinder {
             double possibleOverride = FindLine(imgProcess,mImgDisplay,detectorTrack,
                     imgWidthPx/2.0, overrideY)-(trackLocateStartX);
             if(Math.abs(possibleOverride) > overrideThresh)
-                xCentre = possibleOverride;
+                xCentre = possibleOverride*overrideMul;
 
-            Imgproc.drawMarker(mImgDisplay, new Point(xCentre+trackLocateStartX, imgHeightPx/2.0),
+            double cxc = xCentre+trackLocateStartX;
+            if(cxc > imgWidthPx)
+                cxc = imgWidthPx;
+            if(cxc < 0)
+                cxc = 0;
+            Imgproc.drawMarker(mImgDisplay, new Point(cxc, imgHeightPx/2.0),
                     COLOR_BLACK, Imgproc.MARKER_DIAMOND, 50, 10);
 
             steeringRequest = (xCentre / (imgWidthPx/2.0));
@@ -311,47 +344,7 @@ public class PathFinder {
                     .IncludeRange(ARROW_MIN, ARROW_MAX)
                     .Intersect(detectorTrack)
                     .GetContours();
-            //Imgproc.drawContours(mImgDisplay, arrowContours, -1, COLOR_GREEN, Imgproc.FILLED);//*/
 
-            /*List<MatOfPoint> blackContours = detectorBlack
-                    .Load(imgProcess)
-                    .IncludeRange(BLACK_MIN, BLACK_MAX)
-                    .GetContours();*/
-
-            /*boolean whiteFound = false, blackFound = false;
-            int whiteContourNum = 0, blackContourNum = 0;
-
-            ArrayList<Pair<Integer, Double>> containedWhiteContours = new ArrayList<>();
-            for(MatOfPoint contour : whiteContours)
-            {
-                if(Imgproc.pointPolygonTest(trackContour2f,
-                        ColorContourContainer.GetCentroid(contour), false) > 0)
-                {
-                    final double area = Imgproc.contourArea(contour);
-                    containedWhiteContours.add(new Pair(whiteContourNum, area));
-                    //Imgproc.drawContours(mAlphaBuffer, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
-                    //break;
-                }
-                whiteContourNum++;
-            }
-            double cArea = 0;
-            if(containedWhiteContours.size() > 0)
-            {
-                for(int i = 0; i < containedWhiteContours.size(); i++)
-                {
-                    Pair<Integer, Double> pair = containedWhiteContours.get(i);
-                    double a = pair.second.doubleValue();
-                    if(a > cArea)
-                    {
-                        cArea = a;
-                        whiteContourNum = pair.first.intValue();
-                    }
-                }
-            }
-            if(cArea > 0) {
-                Imgproc.drawContours(mAlphaBuffer, whiteContours, whiteContourNum, COLOR_BLUE, Imgproc.FILLED);
-
-            }//*/
             if(finishFrame >= 0)
             {
                 finishFrame++;
@@ -368,7 +361,7 @@ public class PathFinder {
             throttleOutput = finishStop ? 0 : tmpThr;
             steeringOutput = pid.Run(steeringRequest, 1.0/10);
 
-            safetyStop = false;
+            //safetyStop = false;
             // transparent overlay
             final float alpha = 0.3f;
             Core.addWeighted(mImgDisplay, 1 - alpha, mAlphaBuffer, alpha, 0, mImgDisplay);
@@ -378,7 +371,7 @@ public class PathFinder {
         else
         {
             framesWithoutInput++;
-            if(framesWithoutInput > 10)
+            if(framesWithoutInput > 3)
             {
                 throttleOutput = 0;
                 steeringOutput = 0;

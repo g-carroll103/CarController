@@ -186,10 +186,14 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
 
             //Automation controls:
             case KeyEvent.KEYCODE_M:
+                pf.finishFrame = -1;
+                pf.finishStop = false;
+                pf.safetyStop = false;
                 dc.autonomousControl = false;
                 return true;
             case KeyEvent.KEYCODE_I:
                 dc.autonomousControl = true;
+                pf.safetyStop = false;
                 return true;
 
             //If the keycode isn't recognised:
